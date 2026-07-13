@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Teachers - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="presentation"></i><span>Teachers</span>
+{% endblock %}
+{% block content %}
+<section class="card glass filters">
+  <div class="filter-row">
+    <div class="filter-field grow">
+      <label>Search</label>
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input id="filter-search" type="search" placeholder="Search by name, subject, or ID" />
+      </div>
+    </div>
+    <div class="filter-field">
+      <label>&nbsp;</label>
+      <button id="btn-add-teacher" class="btn-primary">
+        <i data-lucide="user-plus"></i> Add Teacher
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2>Teacher Records</h2>
+    <span class="muted small" id="teachers-count">--</span>
+  </div>
+  <div class="table-scroll">
+    <table id="teachers-table">
+      <thead>
+        <tr>
+          <th>Teacher ID</th>
+          <th>Name</th>
+          <th>Subject</th>
+          <th>Assigned Classes</th>
+          <th>Mobile</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="8" class="empty">Loading teachers...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

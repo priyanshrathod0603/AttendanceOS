@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}AI Chat Assistant - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="message-square"></i><span>AI Assistant</span>
+{% endblock %}
+{% block content %}
+<section class="card glass chat-card">
+  <h2>Ask Krishna School SLM</h2>
+  <p class="muted">Try asking: "Who is present today?", "How many today?", "Find student Priyansh".</p>
+  <div id="log" class="chat-log"></div>
+  <form id="chat-form" style="display: flex; gap: 10px;">
+    <input id="q" autocomplete="off" placeholder="Ask a question..." required style="flex: 1;" />
+    <button type="submit" class="btn-primary">
+      <i data-lucide="send"></i> Send
+    </button>
+  </form>
+</section>
+<script>
+  const log = document.getElementById("log");
+  function add(role, text){
+    const div = document.createElement("div");
+    div.className = "bubble " + role;
+    div.textContent = text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+  document.getElementById("chat-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const q = document.getElementById("q").value.trim();
+    if (!q) return;
+    add("user", q);
+    document.getElementById("q").value = "";
+    add("bot", "Thinking...");
+    const bubbles = log.querySelectorAll(".bubble.bot");
+    const placeholder = bubbles[bubbles.length - 1];
+    try {
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q })
+      });
+      const data = await res.json();
+      placeholder.textContent = data.answer;
+    } catch (err) {
+      placeholder.textContent = "Error: " + err.message;
+    }
+  });
+</script>
+{% endblock %}

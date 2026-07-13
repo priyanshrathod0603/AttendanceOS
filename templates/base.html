@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Krishna English School ERP{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+  />
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle sidebar">
+    <i data-lucide="menu"></i>
+  </button>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><i data-lucide="scan-face"></i></div>
+      <div class="brand-text">
+        <div class="brand-title">Krishna English</div>
+        <div class="brand-sub">ERP System</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="{{ url_for('page_dashboard') }}"
+         class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+        <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+      </a>
+      <a href="{{ url_for('page_attendance') }}"
+         class="nav-item {% if active_page == 'attendance' %}active{% endif %}">
+        <i data-lucide="calendar-check"></i><span>Attendance</span>
+      </a>
+      <div class="nav-accordion {% if active_page == 'students' %}open{% endif %}">
+        <button class="nav-item nav-accordion-trigger {% if active_page == 'students' %}active{% endif %}" type="button">
+          <i data-lucide="users"></i><span>Students</span><i data-lucide="chevron-down" class="nav-chevron"></i>
+        </button>
+        <div class="nav-accordion-panel">
+          <a href="{{ url_for('page_students') }}"
+             class="nav-sub {% if active_page == 'students' and not active_class %}active{% endif %}">
+            <i data-lucide="school"></i><span>All Students</span>
+          </a>
+          <div class="nav-group-label">Pre-Primary</div>
+          {% for c in ["Nursery", "Jr KG", "Sr KG"] %}
+            <a href="{{ url_for('page_students_class', class_name=c) }}"
+               class="nav-sub {% if active_page == 'students' and active_class == c %}active{% endif %}">
+              <i data-lucide="graduation-cap"></i><span>{{ c }}</span>
+            </a>
+          {% endfor %}
+          <div class="nav-group-label">Primary</div>
+          {% for c in ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5"] %}
+            <a href="{{ url_for('page_students_class', class_name=c) }}"
+               class="nav-sub {% if active_page == 'students' and active_class == c %}active{% endif %}">
+              <i data-lucide="graduation-cap"></i><span>{{ c }}</span>
+            </a>
+          {% endfor %}
+          <div class="nav-group-label">Upper Primary</div>
+          {% for c in ["Class 6", "Class 7", "Class 8"] %}
+            <a href="{{ url_for('page_students_class', class_name=c) }}"
+               class="nav-sub {% if active_page == 'students' and active_class == c %}active{% endif %}">
+              <i data-lucide="graduation-cap"></i><span>{{ c }}</span>
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      <a href="{{ url_for('page_teachers') }}"
+         class="nav-item {% if active_page == 'teachers' %}active{% endif %}">
+        <i data-lucide="presentation"></i><span>Teachers</span>
+      </a>
+      <a href="{{ url_for('page_cameras') }}"
+         class="nav-item {% if active_page == 'cameras' %}active{% endif %}">
+        <i data-lucide="video"></i><span>Cameras</span>
+      </a>
+      <a href="{{ url_for('page_reports') }}"
+         class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+        <i data-lucide="line-chart"></i><span>Reports</span>
+      </a>
+      <a href="{{ url_for('page_settings') }}"
+         class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+        <i data-lucide="settings"></i><span>Settings</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="foot-user">
+        <div class="avatar">A</div>
+        <div class="who">
+          <div class="who-name">Admin</div>
+          <div class="who-role">System Admin</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumbs">
+        {% block crumbs %}{% endblock %}
+      </div>
+      <div class="topbar-tools">
+        <div class="search">
+          <i data-lucide="search"></i>
+          <input id="global-search" type="search" placeholder="Search student, roll, class..." />
+        </div>
+        <div class="topbar-meta">
+          <span class="date-chip" id="today-date">Today</span>
+        </div>
+        <button class="icon-btn" title="Notifications">
+          <i data-lucide="bell"></i>
+        </button>
+        <a href="{{ url_for('chat_page') }}" class="icon-btn" title="AI Chat ERP assistant">
+          <i data-lucide="message-square"></i>
+        </a>
+        <button class="profile-pill" type="button" title="Profile">
+          <span class="profile-avatar">A</span>
+          <span class="profile-copy">
+            <strong>Admin User</strong>
+            <small>School Admin</small>
+          </span>
+          <i data-lucide="chevron-down"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- ============== Upload Photo Modal (shared) ============== -->
+  <div id="upload-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-panel" role="document">
+      <header class="modal-head">
+        <h3 id="upload-modal-title">Register Face</h3>
+        <button class="modal-x" data-close="1" aria-label="Close">&times;</button>
+      </header>
+      <div class="modal-body">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="file" role="tab">Choose Image</button>
+          <button class="tab" data-tab="drop" role="tab">Drag &amp; Drop</button>
+          <button class="tab" data-tab="webcam" role="tab">Webcam Capture</button>
+        </div>
+        <section class="tab-panel active" data-panel="file">
+          <label class="file-drop" id="file-label">
+            <input type="file" id="file-input"
+                   accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden />
+            <div class="file-drop-inner">
+              <strong>Click to choose a file</strong>
+              <span>.jpg, .jpeg or .png -- max 8 MB</span>
+            </div>
+          </label>
+        </section>
+        <section class="tab-panel" data-panel="drop">
+          <div class="file-drop" id="dropzone">
+            <div class="file-drop-inner">
+              <strong>Drop the image here</strong>
+              <span>or paste from clipboard (Ctrl/&#8984;+V)</span>
+            </div>
+          </div>
+        </section>
+        <section class="tab-panel" data-panel="webcam">
+          <div class="webcam-wrap">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="snap" hidden></canvas>
+            <div class="webcam-controls">
+              <button id="webcam-start" class="btn-primary" type="button">Open Camera</button>
+              <button id="webcam-capture" class="btn-secondary" type="button" disabled>Capture</button>
+              <button id="webcam-retake" class="btn-secondary" type="button" hidden>Retake</button>
+            </div>
+            <p class="muted small" id="webcam-hint">Camera is off.</p>
+          </div>
+        </section>
+        <div class="preview-row">
+          <div class="preview-box">
+            <img id="preview-img" alt="Preview" />
+            <div class="preview-empty" id="preview-empty">No image selected yet</div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+            <div id="progress-text" class="muted small">Idle</div>
+          </div>
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn-secondary" data-close="1" type="button">Cancel</button>
+        <button id="upload-submit" class="btn-primary" type="button" disabled>Upload</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ============== Result Dialog (shared) ============== -->
+  <div id="result-dialog" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-panel small" role="document">
+      <header class="modal-head">
+        <h3 id="result-title">Result</h3>
+        <button class="modal-x" data-close="1" aria-label="Close">&times;</button>
+      </header>
+      <div class="modal-body">
+        <div id="result-body" class="result-body"></div>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn-primary" data-close="1" type="button">OK</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ============== Generic Form Modal (used by Students/Teachers) ============== -->
+  <div id="form-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close="1"></div>
+    <div class="modal-panel" role="document">
+      <header class="modal-head">
+        <h3 id="form-modal-title">Form</h3>
+        <button class="modal-x" data-close="1" aria-label="Close">&times;</button>
+      </header>
+      <div class="modal-body" id="form-modal-body"></div>
+      <footer class="modal-foot">
+        <button class="btn-secondary" data-close="1" type="button">Cancel</button>
+        <button id="form-modal-save" class="btn-primary" type="button">Save</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Lucide CDN and Bootstrap -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="{{ url_for('static', filename='common.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      lucide.createIcons();
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

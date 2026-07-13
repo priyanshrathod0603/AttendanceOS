@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Not Found{% endblock %}
+{% block content %}
+<section class="card glass">
+  <h2>404</h2>
+  <p>That page doesn't exist.</p>
+  <a class="btn-primary" href="{{ url_for('page_dashboard') }}">Back to dashboard</a>
+</section>
+{% endblock %}

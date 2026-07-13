@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Students - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="users"></i><span>Students</span>
+  {% if active_class %}<i data-lucide="chevron-right" class="nav-chevron"></i><span>{{ active_class }}</span>{% endif %}
+{% endblock %}
+{% block content %}
+<section class="stats" id="students-stats">
+  <div class="stat-card glass">
+    <div class="stat-icon blue"><i data-lucide="users"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Total Students</div>
+      <div class="stat-value" id="stat-total">--</div>
+      <div class="stat-trend" id="stat-scope">selected scope</div>
+    </div>
+  </div>
+  <div class="stat-card glass">
+    <div class="stat-icon green"><i data-lucide="calendar-check"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Present Today</div>
+      <div class="stat-value" id="stat-present">--</div>
+      <div class="stat-trend">attendance marked</div>
+    </div>
+  </div>
+  <div class="stat-card glass">
+    <div class="stat-icon red"><i data-lucide="user-x"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Absent Today</div>
+      <div class="stat-value" id="stat-absent">--</div>
+      <div class="stat-trend">auto-calculated</div>
+    </div>
+  </div>
+  <div class="stat-card glass">
+    <div class="stat-icon amber"><i data-lucide="help-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Unknown Faces</div>
+      <div class="stat-value" id="stat-unknown">--</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass">
+    <div class="stat-icon purple"><i data-lucide="video"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Active Feeds</div>
+      <div class="stat-value" id="stat-cams">--</div>
+      <div class="stat-trend">school cameras</div>
+    </div>
+  </div>
+</section>
+
+<section class="card glass filters">
+  <div class="filter-row">
+    <div class="filter-field">
+      <label>Class</label>
+      <select id="filter-class">
+        <option value="">All Classes</option>
+        {% for c in CLASS_LEVELS %}
+          <option value="{{ c }}" {% if active_class == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>Section</label>
+      <select id="filter-section">
+        <option value="">All Sections</option>
+        {% for s in SECTIONS %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="filter-field grow">
+      <label>Search</label>
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input id="filter-search" type="search" placeholder="Search by roll, name, or ID" />
+      </div>
+    </div>
+    <div class="filter-field">
+      <label>&nbsp;</label>
+      <button id="btn-add-student" class="btn-primary">
+        <i data-lucide="user-plus"></i> Add Student
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2 id="students-title">
+      {% if active_class %}{{ active_class }} Students{% else %}All Students{% endif %}
+    </h2>
+    <span class="muted small" id="students-count">--</span>
+  </div>
+  <div class="table-scroll">
+    <table id="students-table">
+      <thead>
+        <tr>
+          <th>Roll</th>
+          <th>Name</th>
+          <th>Student ID</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5" class="empty">Loading students...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="pager" id="students-pager"></div>
+</section>
+{% endblock %}

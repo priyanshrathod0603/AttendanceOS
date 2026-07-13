@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Settings - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="settings"></i><span>Settings</span>
+{% endblock %}
+{% block content %}
+<div class="settings-grid">
+  <section class="card glass">
+    <h2><i data-lucide="school" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i> School Profile</h2>
+    <div class="form-row"><label>School Name</label><input id="set-school-name" value="Krishna English School" /></div>
+    <div class="form-row"><label>Academic Year</label><input id="set-academic-year" value="2025-2026" /></div>
+    <div class="form-row"><label>Logo / Seal</label><input type="file" id="set-school-logo" accept="image/*" /></div>
+  </section>
+
+  <section class="card glass">
+    <h2><i data-lucide="clock" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i> Attendance Settings</h2>
+    <div class="form-row"><label>Start Time</label><input id="set-start" type="time" value="08:00" /></div>
+    <div class="form-row"><label>End Time</label><input id="set-end" type="time" value="15:00" /></div>
+    <div class="form-row">
+      <label>Recognition Threshold
+        <span class="muted small" id="set-threshold-value">0.35</span>
+      </label>
+      <input id="set-threshold" type="range" min="0.20" max="0.60" step="0.01" value="0.35" />
+    </div>
+  </section>
+
+  <section class="card glass">
+    <h2><i data-lucide="database" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i> Database Settings</h2>
+    <div class="form-row"><label>Connection URI</label>
+      <code id="set-db-url">postgresql://***@localhost:5432/faceid_db</code>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary"><i data-lucide="download"></i> Backup</button>
+      <button class="btn-secondary"><i data-lucide="upload"></i> Restore</button>
+    </div>
+  </section>
+
+  <section class="card glass">
+    <h2><i data-lucide="palette" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i> Appearance & Localization</h2>
+    <div class="form-row"><label>Default Theme</label>
+      <select id="set-theme">
+        <option value="light">Light (Liquid Glass)</option>
+        <option value="dark">Dark (Liquid Glass)</option>
+      </select>
+    </div>
+    <div class="form-row"><label>System Language</label>
+      <select id="set-lang">
+        <option>English</option>
+        <option>Hindi</option>
+        <option>Marathi</option>
+      </select>
+    </div>
+  </section>
+
+  <section class="card glass span-2">
+    <h2><i data-lucide="info" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i> System Information</h2>
+    <div class="sys-grid">
+      <div><strong>Python</strong><div id="sys-py">3.14.3</div></div>
+      <div><strong>OpenCV</strong><div id="sys-cv">--</div></div>
+      <div><strong>InsightFace</strong><div id="sys-if">--</div></div>
+      <div><strong>PostgreSQL</strong><div>17</div></div>
+      <div><strong>Flask</strong><div id="sys-flask">--</div></div>
+      <div><strong>Build version</strong><div>Krishna English School ERP v1.0</div></div>
+    </div>
+  </section>
+</div>
+{% endblock %}

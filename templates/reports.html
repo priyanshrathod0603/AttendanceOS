@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Reports - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="line-chart"></i><span>Reports</span>
+{% endblock %}
+{% block content %}
+<section class="report-grid">
+  <button class="report-card glass" data-type="daily">
+    <i data-lucide="calendar"></i>
+    <h3>Daily Attendance</h3>
+    <p>Per-day attendance summary.</p>
+  </button>
+  <button class="report-card glass" data-type="monthly">
+    <i data-lucide="calendar-days"></i>
+    <h3>Monthly Attendance</h3>
+    <p>Month-on-month roll-up.</p>
+  </button>
+  <button class="report-card glass" data-type="class">
+    <i data-lucide="school"></i>
+    <h3>Class-wise</h3>
+    <p>Breakdown by class and section.</p>
+  </button>
+  <button class="report-card glass" data-type="student">
+    <i data-lucide="user"></i>
+    <h3>Student-wise</h3>
+    <p>One student at a time.</p>
+  </button>
+  <button class="report-card glass" data-type="teacher">
+    <i data-lucide="presentation"></i>
+    <h3>Teacher-wise</h3>
+    <p>Roster by teacher.</p>
+  </button>
+  <button class="report-card glass" data-type="unknown">
+    <i data-lucide="help-circle"></i>
+    <h3>Unknown Faces</h3>
+    <p>Unrecognized detections.</p>
+  </button>
+</section>
+
+<section class="card glass" id="report-output" hidden>
+  <div class="card-head">
+    <h2 id="report-title">Report</h2>
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-export-csv">
+        <i data-lucide="file-spreadsheet"></i> Excel
+      </button>
+      <button class="btn-secondary" id="btn-export-pdf">
+        <i data-lucide="file-text"></i> PDF
+      </button>
+    </div>
+  </div>
+  <div id="report-chart" class="report-chart"></div>
+  <div class="table-scroll">
+    <table id="report-table">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='reports.js') }}"></script>
+{% endblock %}

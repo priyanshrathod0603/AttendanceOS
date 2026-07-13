@@ -1,0 +1,19 @@
+# Python 3.14 + macOS Apple Silicon + PostgreSQL 17 + pgAdmin 4
+# Stack rationale:
+#   - psycopg v3 is the modern actively maintained PostgreSQL driver
+#     (psycopg2-binary still works, but psycopg3 is preferred for new projects).
+#   - dlib / face_recognition have no Python 3.14 wheels and historically
+#     needed system cmake. We use InsightFace + onnxruntime instead, which
+#     ships prebuilt wheels for Python 3.14 and Apple Silicon (CoreML EP).
+#   - opencv-python has prebuilt wheels for 3.14/arm64, no Homebrew cmake needed.
+Flask>=3.0,<4.0
+Flask-SQLAlchemy>=3.1,<4.0
+SQLAlchemy>=2.0.36,<3.0
+psycopg[binary]>=3.2.3
+opencv-python>=4.10.0.84
+numpy>=2.1.0
+Pillow>=11.0.0
+python-dotenv>=1.0.1
+requests>=2.32.3
+insightface>=0.7.3
+onnxruntime>=1.19.0

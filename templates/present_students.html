@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Present Students - Krishna English School ERP{% endblock %}
+{% block crumbs %}<i data-lucide="user-check"></i><span>Present Students</span>{% endblock %}
+{% block content %}
+<section class="page-hero glass">
+  <div>
+    <p class="eyebrow">Live visibility</p>
+    <h1>Present Students</h1>
+    <p class="hero-copy">View students who are marked present today and filter instantly by class or name.</p>
+  </div>
+  <div class="hero-cta">
+    <button id="present-refresh" class="btn-primary"><i data-lucide="refresh-cw"></i> Refresh</button>
+  </div>
+</section>
+
+<section class="card glass filters">
+  <div class="filter-row">
+    <div class="filter-field">
+      <label>Select Class</label>
+      <select id="present-filter-class">
+        <option value="">All Students</option>
+      </select>
+    </div>
+    <div class="filter-field grow">
+      <label>Search</label>
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input id="present-filter-search" type="search" placeholder="Search by name or roll number" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="summary-grid">
+  <div class="summary-card glass">
+    <span class="summary-title">Present Today</span>
+    <strong id="present-summary-present">0</strong>
+  </div>
+  <div class="summary-card glass">
+    <span class="summary-title">Absent Today</span>
+    <strong id="present-summary-absent">0</strong>
+  </div>
+  <div class="summary-card glass">
+    <span class="summary-title">Total Students</span>
+    <strong id="present-summary-total">0</strong>
+  </div>
+  <div class="summary-card glass">
+    <span class="summary-title">Attendance %</span>
+    <strong id="present-summary-percent">0%</strong>
+  </div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2>Present Students</h2>
+    <span class="muted small">Live attendance for today</span>
+  </div>
+  <div id="present-empty-state" class="empty-state" hidden>
+    <i data-lucide="user-check"></i>
+    <h3>No present students found</h3>
+    <p>Attendance records for today will appear here instantly.</p>
+  </div>
+  <div id="present-students-list" class="present-list"></div>
+</section>
+{% endblock %}

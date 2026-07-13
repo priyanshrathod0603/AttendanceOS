@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Cameras - Krishna English School ERP{% endblock %}
+{% block crumbs %}<i data-lucide="video"></i><span>Cameras</span>{% endblock %}
+{% block content %}
+<section class="card glass filters">
+  <div class="filter-row">
+    <div class="filter-field grow">
+      <label>&nbsp;</label>
+      <button id="btn-add-camera" class="btn-primary">
+        <i data-lucide="camera"></i> Add Camera
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="cam-grid" id="cam-grid">
+  <div class="empty">Loading cameras...</div>
+</section>
+{% endblock %}

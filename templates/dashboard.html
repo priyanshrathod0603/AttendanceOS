@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="home"></i><span>Dashboard</span>
+{% endblock %}
+{% block content %}
+<div class="welcome-banner">
+  <h1>Good Day, Admin! 👋</h1>
+  <p>Here is what's happening at Krishna English School today.</p>
+</div>
+
+<section class="stats" id="stats">
+  <div class="stat-card glass" data-key="total_students">
+    <div class="stat-icon blue"><i data-lucide="users"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Total Students</div>
+      <div class="stat-value" id="stat-total">--</div>
+      <div class="stat-trend" id="stat-total-sub">across school</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="present_today">
+    <div class="stat-icon green"><i data-lucide="calendar-check"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Present Today</div>
+      <div class="stat-value" id="stat-present">--</div>
+      <div class="stat-trend" id="stat-present-sub">live</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="absent_today">
+    <div class="stat-icon red"><i data-lucide="user-x"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Absent Today</div>
+      <div class="stat-value" id="stat-absent">--</div>
+      <div class="stat-trend" id="stat-absent-sub">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="unknown_today">
+    <div class="stat-icon amber"><i data-lucide="help-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Unknown Faces</div>
+      <div class="stat-value" id="stat-unknown">--</div>
+      <div class="stat-trend">unrecognized today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="active_cameras">
+    <div class="stat-icon purple"><i data-lucide="video"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Active Cameras</div>
+      <div class="stat-value" id="stat-cams">--</div>
+      <div class="stat-trend">live feeds</div>
+    </div>
+  </div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2>Live Camera Feeds</h2>
+    <div class="card-tools">
+      <span class="scope-pill" id="scope-pill">All Classes</span>
+    </div>
+  </div>
+  <div class="cam-grid" id="cam-grid">
+    <div class="empty">Loading cameras...</div>
+  </div>
+</section>
+
+<section class="two-col">
+  <div class="card glass">
+    <div class="card-head">
+      <h2>Today's Attendance</h2>
+      <a class="link" href="{{ url_for('page_attendance') }}">View all <i data-lucide="chevron-right" style="vertical-align: middle; width: 16px; height: 16px;"></i></a>
+    </div>
+    <div class="table-scroll">
+      <table id="attendance-table">
+        <thead>
+          <tr>
+            <th>Time</th><th>Name</th><th>Roll</th><th>Class</th><th>Camera</th><th>Conf.</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card glass">
+    <div class="card-head">
+      <h2>Unknown Faces</h2>
+      <span class="muted small">last 10</span>
+    </div>
+    <ul class="unknown-list" id="unknown-list">
+      <li class="empty">No unknown faces recorded.</li>
+    </ul>
+  </div>
+</section>
+{% endblock %}
