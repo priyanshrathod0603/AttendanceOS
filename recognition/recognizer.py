@@ -80,6 +80,10 @@ class FaceRecognizer:
             return int(text)
 
         if text.startswith(("rtsp://", "rtmp://", "http://", "https://", "file://")):
+            if text.startswith(("http://", "https://")):
+                temp = text.rstrip("/")
+                if not temp.endswith("/video"):
+                    text = temp + "/video"
             return text
 
         if text.startswith("/") or os.path.exists(text):
@@ -172,6 +176,50 @@ class FaceRecognizer:
             )
         return detections
 
+    def _open_capture(self) -> bool:
+        """Internal helper to open cv2.VideoCapture with correct backend and logs."""
+        if self.cap is not None:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
+
+        print("Camera URL:")
+        print(self.source)
+
+        # On macOS the default backend (cv2.CAP_ANY) sometimes fails to open
+        # an internal webcam even though CAP_AVFOUNDATION works fine. We pick
+        # the backend explicitly per-platform for local webcams, but use the
+        # default backend for network streams so FFmpeg/GStreamer is used.
+        if platform.system() == "Darwin":
+            source = int(self.source) if str(self.source).isdigit() else self.source
+            if isinstance(source, int):
+                self.cap = cv2.VideoCapture(source, cv2.CAP_AVFOUNDATION)
+            else:
+                self.cap = cv2.VideoCapture(source)
+        else:
+            self.cap = cv2.VideoCapture(self.source)
+
+        opened = self.cap.isOpened()
+        print(f"Opened={opened}")
+
+        if opened:
+            fps = self.cap.get(cv2.CAP_PROP_FPS)
+            width = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            print(f"FPS={fps}")
+            print(f"Frame Width={width}")
+            print(f"Frame Height={height}")
+            try:
+                print("[DEBUG] Backend:", self.cap.getBackendName())
+            except Exception:
+                print("[DEBUG] Backend: <unavailable>")
+        else:
+            print(f"[WARN] Camera source could not be opened: {self.source}")
+
+        return opened
+
     # ----------------------------------------------------------- lifecycle
     def start(self, app) -> None:
         """Spawn the background capture loop."""
@@ -181,36 +229,7 @@ class FaceRecognizer:
         self._stop_event.clear()
         self.refresh_known_faces()
 
-        # [DEBUG] confirm the source value and its Python type so we can see
-        # whether an int index slipped in as a string (or vice versa).
-        print(f"[DEBUG] Source={self.source}")
-        print(f"[DEBUG] Source type={type(self.source)}")
-
-        # On macOS the default backend (cv2.CAP_ANY) sometimes fails to open
-        # an internal webcam even though CAP_AVFOUNDATION works fine. We pick
-        # the backend explicitly per-platform so a plain `cv2.VideoCapture(0)`
-        # keeps working on Linux/Windows as before.
-        if platform.system() == "Darwin":
-            source = int(self.source) if str(self.source).isdigit() else self.source
-            self.cap = cv2.VideoCapture(source, cv2.CAP_AVFOUNDATION)
-        else:
-            self.cap = cv2.VideoCapture(self.source)
-
-        # [DEBUG] confirm the source string and whether OpenCV could open it.
-        print(f"[DEBUG] Camera opened={self.cap.isOpened()}")
-        # [DEBUG] show which backend OpenCV actually negotiated.
-        try:
-            print("[DEBUG] Backend:", self.cap.getBackendName())
-        except Exception:
-            print("[DEBUG] Backend: <unavailable>")
-
-        if not self.cap.isOpened():
-            print(f"[WARN] camera source could not be opened: {self.source}")
-            try:
-                self.cap.release()
-            except Exception:
-                pass
-            self.cap = None
+        if not self._open_capture():
             self.running = False
             return
 
@@ -221,24 +240,19 @@ class FaceRecognizer:
         warmup_ok = False
         for i in range(20):
             ok, frame = self.cap.read()
-            print(f"[DEBUG] Warmup {i}: {ok}")
+            print(f"Frame={ok}")
             if ok and frame is not None:
                 warmup_ok = True
                 break
         if not warmup_ok:
             print("[DEBUG] Warmup failed: every frame returned False. "
                   "Camera is not producing frames; aborting start().")
-            try:
-                self.cap.release()
-            except Exception:
-                pass
-            self.cap = None
-            print(f"[WARN] camera warmup failed for source: {self.source}")
-            try:
-                self.cap.release()
-            except Exception:
-                pass
-            self.cap = None
+            if self.cap is not None:
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                self.cap = None
             self.running = False
             return
 
@@ -284,15 +298,40 @@ class FaceRecognizer:
 
     def _loop(self, app) -> None:
         """Continuously read frames and run face matching."""
+        consecutive_failures = 0
         while self.running and not self._stop_event.is_set():
-            ok, frame = (self.cap.read() if self.cap is not None else (False, None))
-            # [DEBUG] did the capture actually produce a frame?
-            print(f"[DEBUG] Frame read={ok}")
-            if frame is not None:
-                print(f"[DEBUG] Frame shape={frame.shape}")
+            if self.cap is None:
+                print("[DEBUG] Camera capture is None, attempting to reopen...")
+                if not self._open_capture():
+                    self._stop_event.wait(2.0)
+                    continue
+                consecutive_failures = 0
+
+            ok, frame = self.cap.read()
+            print(f"Frame={ok}")
+
             if not ok or frame is None:
-                self._stop_event.wait(0.05)
+                consecutive_failures += 1
+                print(f"[WARN] Frame read failed (consecutive={consecutive_failures})")
+
+                # Retry immediately up to 3 times
+                if consecutive_failures < 3:
+                    self._stop_event.wait(0.1)
+                    continue
+
+                # Reconnect
+                print("[WARN] Too many consecutive frame failures. Releasing and reconnecting...")
+                if self.cap is not None:
+                    try:
+                        self.cap.release()
+                    except Exception:
+                        pass
+                    self.cap = None
+                self._stop_event.wait(2.0)
                 continue
+
+            consecutive_failures = 0
+
             try:
                 with app.app_context():
                     detections = self._process_frame(frame)

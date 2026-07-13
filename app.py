@@ -895,6 +895,12 @@ def register_routes(app: Flask) -> None:
 
         def gen():
             while True:
+                # Check if camera/recognizer is still active and running in manager
+                rec = manager.recognizers.get(cid)
+                if rec is None or not rec.running:
+                    print(f"[DEBUG] Camera {cid} is not active or running. Stopping stream.")
+                    break
+
                 frame, dets = manager.snapshot(cid)
                 if frame is None:
                     time.sleep(0.1)
