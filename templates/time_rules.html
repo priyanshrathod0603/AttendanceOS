@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ active_time_scope|title }} Time Rules - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="timer"></i><span>Attendance Time Management</span>
+  <i data-lucide="chevron-right" style="width:14px;height:14px;opacity:.5"></i>
+  <span>{{ active_time_scope|title }} Time Rules</span>
+{% endblock %}
+{% block content %}
+<div class="welcome-banner">
+  <h1>{% if active_time_scope == 'teacher' %}Teacher Time Rules{% else %}Student Time Rules{% endif %} <i data-lucide="briefcase" class="lucide-icon" style="vertical-align:middle"></i></h1>
+  <p>Configure {{ active_time_scope }} attendance windows, late rules, half-day, overtime, and holidays. Teacher and student rules are independent.</p>
+</div>
+
+<div class="tabs" role="tablist" id="scope-tabs">
+  <a href="/time-rules/teacher" class="tab {% if active_time_scope == 'teacher' %}active{% endif %}" role="tab">Teacher</a>
+  <a href="/time-rules/student" class="tab {% if active_time_scope == 'student' %}active{% endif %}" role="tab">Student</a>
+</div>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2><i data-lucide="clock" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i>Time Windows</h2>
+    <span class="muted small" id="rules-updated">--</span>
+  </div>
+  <div id="time-rows" class="rule-grid"></div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2><i data-lucide="calendar" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i>Weekly Off</h2>
+  </div>
+  <div id="weekly-off" class="weekly-off"></div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2><i data-lucide="sun" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i>Holiday Calendar</h2>
+    <button class="btn-primary" id="btn-add-holiday"><i data-lucide="plus"></i> Add Holiday</button>
+  </div>
+  <div class="table-scroll">
+    <table id="holiday-table">
+      <thead>
+        <tr>
+          <th>Date</th><th>Name</th><th>Kind</th><th>Scope</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody><tr><td colspan="5" class="empty">Loading holidays...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2><i data-lucide="toggle-right" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i>Feature Toggles</h2>
+  </div>
+  <div id="toggle-rows" class="rule-grid"></div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2><i data-lucide="activity" class="lucide-icon" style="vertical-align: middle; margin-right: 8px;"></i>Audit Log (latest 50)</h2>
+  </div>
+  <div class="table-scroll">
+    <table id="audit-table">
+      <thead><tr><th>Time</th><th>Entity</th><th>ID</th><th>Field</th><th>Old</th><th>New</th><th>By</th><th>Reason</th></tr></thead>
+      <tbody><tr><td colspan="8" class="empty">No audit entries yet.</td></tr></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='time_rules.js') }}"></script>
+{% endblock %}

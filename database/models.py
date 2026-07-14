@@ -16,6 +16,7 @@ Design notes
 """
 from datetime import datetime, timezone
 
+from sqlalchemy import JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 
@@ -41,7 +42,9 @@ class Student(db.Model):
     email = db.Column(db.String(120))
     photo_path = db.Column(db.String(255))
     # 512-d InsightFace embedding (list[float]). Stored as JSONB.
-    encoding = db.Column(JSONB)
+    # SQLite cannot compile PostgreSQL's JSONB. Use portable JSON locally and
+    # retain JSONB when a PostgreSQL database is selected.
+    encoding = db.Column(JSON().with_variant(JSONB, "postgresql"))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -92,7 +95,14 @@ class Camera(db.Model):
 
 
 class Attendance(db.Model):
-    """One attendance mark per student per day."""
+    """One attendance mark per student per day.
+
+    The time-management module adds four additive columns
+    (``event_type``, ``session_id``, ``manual_edit``, ``edit_reason``)
+    that are nullable / have safe defaults. Existing rows and the
+    existing ``status`` column are kept 100% intact for backward
+    compatibility with the original recognizer pipeline.
+    """
 
     __tablename__ = "attendance"
 
@@ -110,6 +120,12 @@ class Attendance(db.Model):
     confidence = db.Column(db.Float)
     status = db.Column(db.String(20), default="present", nullable=False)
 
+    # ---- time-management additions (nullable, default safe) ----
+    event_type = db.Column(db.String(8), default="in", nullable=False)  # 'in' | 'out'
+    session_id = db.Column(db.Integer, index=True)
+    manual_edit = db.Column(db.Boolean, default=False, nullable=False)
+    edit_reason = db.Column(db.String(255))
+
     camera = db.relationship("Camera")
 
     def to_dict(self) -> dict:
@@ -125,6 +141,10 @@ class Attendance(db.Model):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "confidence": self.confidence,
             "status": self.status,
+            "event_type": self.event_type,
+            "session_id": self.session_id,
+            "manual_edit": self.manual_edit,
+            "edit_reason": self.edit_reason,
         }
 
 
@@ -137,10 +157,13 @@ class Teacher(db.Model):
     teacher_id = db.Column(db.String(50), unique=True, nullable=False, index=True)
     name = db.Column(db.String(120), nullable=False)
     subject = db.Column(db.String(120))
+    department = db.Column(db.String(120), index=True)
+    designation = db.Column(db.String(120), index=True)
     assigned_classes = db.Column(db.String(255))  # comma-separated, e.g. "5A,6B"
     mobile = db.Column(db.String(20))
     email = db.Column(db.String(120))
     photo_path = db.Column(db.String(255))
+    encoding = db.Column(JSON().with_variant(JSONB, "postgresql"))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(
         db.DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -152,10 +175,13 @@ class Teacher(db.Model):
             "teacher_id": self.teacher_id,
             "name": self.name,
             "subject": self.subject,
+            "department": self.department,
+            "designation": self.designation,
             "assigned_classes": self.assigned_classes,
             "mobile": self.mobile,
             "email": self.email,
             "photo_path": self.photo_path,
+            "has_encoding": self.encoding is not None,
             "is_active": self.is_active,
         }
 
@@ -165,6 +191,11 @@ class UnknownFace(db.Model):
 
     Used by the Reports module to surface unrecognised faces even though
     no attendance is recorded for them.
+
+    The time-management module adds two additive nullable columns
+    (``image_path``, ``location``) and an ``alerted`` flag. The original
+    ``snapshot_path`` / ``camera_id`` / ``timestamp`` / ``confidence``
+    columns are kept as-is.
     """
 
     __tablename__ = "unknown_faces"
@@ -180,6 +211,11 @@ class UnknownFace(db.Model):
     confidence = db.Column(db.Float)
     snapshot_path = db.Column(db.String(255))
 
+    # ---- time-management additions ----
+    image_path = db.Column(db.String(255))
+    location = db.Column(db.String(120))
+    alerted = db.Column(db.Boolean, default=False, nullable=False)
+
     camera = db.relationship("Camera")
 
     def to_dict(self) -> dict:
@@ -190,4 +226,7 @@ class UnknownFace(db.Model):
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
             "confidence": self.confidence,
             "snapshot_path": self.snapshot_path,
+            "image_path": self.image_path,
+            "location": self.location,
+            "alerted": self.alerted,
         }

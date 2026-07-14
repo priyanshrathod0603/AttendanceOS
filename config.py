@@ -31,7 +31,7 @@ def _database_uri() -> str:
     """
     raw = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:postgres@localhost:5432/faceid_db",
+        f"sqlite:///{os.path.join(BASE_DIR, 'krishna_erp.db')}",
     )
     if raw.startswith("postgresql://"):
         return "postgresql+psycopg://" + raw[len("postgresql://"):]
@@ -49,12 +49,9 @@ class Config:
     # --- Database ---
     SQLALCHEMY_DATABASE_URI: str = _database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
-    # Pool tuning that suits both pgAdmin-managed local installs and remote
-    # PostgreSQL 17 servers.
-    SQLALCHEMY_ENGINE_OPTIONS: dict = {
-        "pool_pre_ping": True,
-        "pool_recycle": 1800,
-    }
+    # Works with SQLite and PostgreSQL. PostgreSQL deployments can still be
+    # selected by setting DATABASE_URL without changing application code.
+    SQLALCHEMY_ENGINE_OPTIONS: dict = {"pool_pre_ping": True, "pool_recycle": 1800}
 
     # --- Camera ---
     CAMERA_SOURCE: str = os.getenv("CAMERA_SOURCE", "0")

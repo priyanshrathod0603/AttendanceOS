@@ -38,9 +38,15 @@ from werkzeug.utils import secure_filename
 from camera.stream import manager
 from config import Config
 from database import Attendance, Camera, Student, Teacher, UnknownFace
+from database.enterprise_models import (
+    AttendanceEvent, StudentAttendance, TeacherAttendance, AttendanceLog,
+    AttendanceSetting, HolidayCalendar, WeeklyOff,
+)
 from database.db import db as _db
 from recognition.encoder import encode_image
 from recognition.recognizer import FaceRecognizer
+from time_management import ensure_default_rules
+from time_management.api import bp as time_mgmt_bp
 
 
 # Canonical class list used by the sidebar / filter dropdowns.
@@ -128,9 +134,53 @@ def ensure_schema_compat() -> None:
         "ALTER TABLE students ADD COLUMN IF NOT EXISTS encoding JSONB",
         "ALTER TABLE students ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE",
         "ALTER TABLE students ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now()",
+        # ---- time-management additions (additive, safe defaults) ----
+        "ALTER TABLE attendance ADD COLUMN IF NOT EXISTS event_type VARCHAR(8) NOT NULL DEFAULT 'in'",
+        "ALTER TABLE attendance ADD COLUMN IF NOT EXISTS session_id INTEGER",
+        "ALTER TABLE attendance ADD COLUMN IF NOT EXISTS manual_edit BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE attendance ADD COLUMN IF NOT EXISTS edit_reason VARCHAR(255)",
+        "CREATE INDEX IF NOT EXISTS ix_attendance_session_id ON attendance(session_id)",
+        "ALTER TABLE unknown_faces ADD COLUMN IF NOT EXISTS image_path VARCHAR(255)",
+        "ALTER TABLE unknown_faces ADD COLUMN IF NOT EXISTS location VARCHAR(120)",
+        "ALTER TABLE unknown_faces ADD COLUMN IF NOT EXISTS alerted BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS department VARCHAR(120)",
+        "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS designation VARCHAR(120)",
+        "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS photo_path VARCHAR(255)",
+        "ALTER TABLE teachers ADD COLUMN IF NOT EXISTS encoding JSONB",
+        "ALTER TABLE student_attendance ADD COLUMN IF NOT EXISTS working_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE teacher_attendance ADD COLUMN IF NOT EXISTS working_seconds INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE student_time_rules ADD COLUMN IF NOT EXISTS in_end_time VARCHAR(5) NOT NULL DEFAULT '09:30'",
+        "ALTER TABLE student_time_rules ADD COLUMN IF NOT EXISTS out_detection_start VARCHAR(5) NOT NULL DEFAULT '16:00'",
+        "ALTER TABLE student_time_rules ADD COLUMN IF NOT EXISTS early_exit_time VARCHAR(5) NOT NULL DEFAULT '16:30'",
+        "ALTER TABLE student_time_rules ADD COLUMN IF NOT EXISTS overtime_start VARCHAR(5) NOT NULL DEFAULT '17:00'",
+        "ALTER TABLE teacher_time_rules ADD COLUMN IF NOT EXISTS in_end_time VARCHAR(5) NOT NULL DEFAULT '09:30'",
+        "ALTER TABLE teacher_time_rules ADD COLUMN IF NOT EXISTS out_detection_start VARCHAR(5) NOT NULL DEFAULT '16:00'",
+        "ALTER TABLE teacher_time_rules ADD COLUMN IF NOT EXISTS early_exit_time VARCHAR(5) NOT NULL DEFAULT '16:30'",
+        "ALTER TABLE teacher_time_rules ADD COLUMN IF NOT EXISTS overtime_start VARCHAR(5) NOT NULL DEFAULT '17:00'",
     ]
-    for stmt in statements:
-        _db.session.execute(text(stmt))
+    if _db.engine.dialect.name == "sqlite":
+        # SQLite supports ADD COLUMN but not PostgreSQL's IF NOT EXISTS.
+        # Only issue an ALTER for columns absent from an existing database.
+        from sqlalchemy import inspect
+        columns = {table: {c["name"] for c in inspect(_db.engine).get_columns(table)}
+                   for table in ("students", "attendance", "unknown_faces", "teachers", "student_attendance", "teacher_attendance", "student_time_rules", "teacher_time_rules")}
+        sqlite_columns = {
+            "students": [("class_name", "VARCHAR(80)"), ("section", "VARCHAR(40)"), ("mobile", "VARCHAR(20)"), ("email", "VARCHAR(120)"), ("photo_path", "VARCHAR(255)"), ("encoding", "JSON"), ("is_active", "BOOLEAN NOT NULL DEFAULT 1"), ("created_at", "DATETIME")],
+            "attendance": [("event_type", "VARCHAR(8) NOT NULL DEFAULT 'in'"), ("session_id", "INTEGER"), ("manual_edit", "BOOLEAN NOT NULL DEFAULT 0"), ("edit_reason", "VARCHAR(255)")],
+            "unknown_faces": [("image_path", "VARCHAR(255)"), ("location", "VARCHAR(120)"), ("alerted", "BOOLEAN NOT NULL DEFAULT 0")],
+            "teachers": [("department", "VARCHAR(120)"), ("designation", "VARCHAR(120)"), ("photo_path", "VARCHAR(255)"), ("encoding", "JSON")],
+            "student_attendance": [("working_seconds", "INTEGER NOT NULL DEFAULT 0")],
+            "teacher_attendance": [("working_seconds", "INTEGER NOT NULL DEFAULT 0")],
+            "student_time_rules": [("in_end_time", "VARCHAR(5) NOT NULL DEFAULT '09:30'"), ("out_detection_start", "VARCHAR(5) NOT NULL DEFAULT '16:00'"), ("early_exit_time", "VARCHAR(5) NOT NULL DEFAULT '16:30'"), ("overtime_start", "VARCHAR(5) NOT NULL DEFAULT '17:00'")],
+            "teacher_time_rules": [("in_end_time", "VARCHAR(5) NOT NULL DEFAULT '09:30'"), ("out_detection_start", "VARCHAR(5) NOT NULL DEFAULT '16:00'"), ("early_exit_time", "VARCHAR(5) NOT NULL DEFAULT '16:30'"), ("overtime_start", "VARCHAR(5) NOT NULL DEFAULT '17:00'")],
+        }
+        for table, definitions in sqlite_columns.items():
+            for column, definition in definitions:
+                if column not in columns.get(table, set()):
+                    _db.session.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
+    else:
+        for stmt in statements:
+            _db.session.execute(text(stmt))
 
     for student in Student.query.all():
         normalized_class = _normalize_class_name(student.class_name)
@@ -153,6 +203,20 @@ def create_app() -> Flask:
     with app.app_context():
         _db.create_all()
         ensure_schema_compat()
+        # Seed the default time-rule rows for teacher + student scopes.
+        # Idempotent — a no-op if they already exist.
+        try:
+            ensure_default_rules()
+        except Exception as exc:
+            print(f"[WARN] ensure_default_rules failed: {exc}")
+        # Separate normalized enterprise rule rows, kept apart from the
+        # compatibility time-rule module above.
+        from database.enterprise_models import TeacherTimeRule, StudentTimeRule
+        if TeacherTimeRule.query.first() is None:
+            _db.session.add(TeacherTimeRule())
+        if StudentTimeRule.query.first() is None:
+            _db.session.add(StudentTimeRule())
+        _db.session.commit()
 
         # --- deduplicate cameras (fix for Issue #2) ---
         # Group cameras by their normalised source key and keep only the
@@ -193,6 +257,7 @@ def create_app() -> Flask:
                 _db.session.rollback()
 
     register_routes(app)
+    app.register_blueprint(time_mgmt_bp)
 
     @app.context_processor
     def inject_globals():
@@ -226,7 +291,7 @@ def register_routes(app: Flask) -> None:
     def page_attendance():
         return render_template(
             "attendance.html",
-            active_page="attendance",
+            active_page="attendance_enterprise",
         )
 
     @app.route("/students")
@@ -276,6 +341,39 @@ def register_routes(app: Flask) -> None:
     def chat_page():
         return render_template("chat.html", active_page=None)
 
+    # ------------------------------------------- enterprise time management
+    @app.route("/time-rules/<scope>")
+    def page_time_rules(scope: str):
+        if scope not in {"teacher", "student"}:
+            scope = "student"
+        return render_template(
+            "time_rules.html",
+            active_page="time_rules",
+            active_time_scope=scope,
+        )
+
+    @app.route("/dashboard-enterprise")
+    def page_dashboard_enterprise():
+        return render_template(
+            "dashboard_enterprise.html",
+            active_page="dashboard_enterprise",
+            active_class=None,
+        )
+
+    @app.route("/reports-enterprise")
+    def page_reports_enterprise():
+        return render_template(
+            "reports_enterprise.html",
+            active_page="reports_enterprise",
+        )
+
+    @app.route("/attendance-extended")
+    def page_attendance_extended():
+        return render_template(
+            "attendance_extended.html",
+            active_page="attendance_extended",
+        )
+
     # ------------------------------------------------------------- meta api
     @app.route("/api/meta")
     def api_meta():
@@ -307,17 +405,16 @@ def register_routes(app: Flask) -> None:
             student_q = student_q.filter_by(section=section)
         total_students = student_q.count()
 
-        present_ids_q = (
-            _db.session.query(Attendance.student_id)
-            .filter(func.date(Attendance.timestamp) == date.today())
+        present_ids_q = _db.session.query(StudentAttendance.student_id).filter(
+            StudentAttendance.attendance_date == date.today()
         )
         if class_name:
             present_ids_q = present_ids_q.join(
-                Student, Student.id == Attendance.student_id
+                Student, Student.id == StudentAttendance.student_id
             ).filter(Student.class_name == class_name)
         if section:
             present_ids_q = present_ids_q.join(
-                Student, Student.id == Attendance.student_id
+                Student, Student.id == StudentAttendance.student_id
             ).filter(Student.section == section)
         present_ids = {row[0] for row in present_ids_q.all()}
 
@@ -334,6 +431,15 @@ def register_routes(app: Flask) -> None:
             present_today = len(present_ids)
 
         absent_today = max(total_students - present_today, 0)
+        teachers_present = TeacherAttendance.query.filter_by(attendance_date=date.today()).count()
+        total_teachers = Teacher.query.filter_by(is_active=True).count()
+        entries = AttendanceEvent.query.filter(
+            func.date(AttendanceEvent.event_time) == date.today(), AttendanceEvent.event_type == "in"
+        ).count()
+        exits = AttendanceEvent.query.filter(
+            func.date(AttendanceEvent.event_time) == date.today(), AttendanceEvent.event_type == "out"
+        ).count()
+        late_today = StudentAttendance.query.filter_by(attendance_date=date.today(), is_late=True).count() + TeacherAttendance.query.filter_by(attendance_date=date.today(), is_late=True).count()
         unknown_today = (
             UnknownFace.query.filter(func.date(UnknownFace.timestamp) == date.today()).count()
         )
@@ -346,6 +452,13 @@ def register_routes(app: Flask) -> None:
                 "absent_today": absent_today,
                 "unknown_today": unknown_today,
                 "active_cameras": active_cams,
+                "students_present": present_today,
+                "teachers_present": teachers_present,
+                "students_absent": absent_today,
+                "teachers_absent": max(total_teachers - teachers_present, 0),
+                "late_today": late_today,
+                "today_entries": entries,
+                "today_exits": exits,
                 "class_name": class_name,
                 "section": section,
             }
@@ -834,11 +947,431 @@ def register_routes(app: Flask) -> None:
             },
         )
 
+    # ----------------------------------------- enterprise report export
+    @app.route("/api/reports/export")
+    def api_reports_export():
+        """Export a report in CSV / Excel / PDF / Print (HTML)."""
+        from enterprise_query import build_report
+        report_type = request.args.get("type") or "daily"
+        fmt = (request.args.get("format") or "csv").lower()
+        d_raw = request.args.get("date")
+        try:
+            target = datetime.strptime(d_raw, "%Y-%m-%d").date() if d_raw else date.today()
+        except ValueError:
+            return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+        def _opt(name):
+            raw = request.args.get(name)
+            if not raw:
+                return None
+            try:
+                return datetime.strptime(raw, "%Y-%m-%d").date()
+            except ValueError:
+                return None
+        rows, headers, title = build_report(
+            report_type,
+            d=target,
+            start=_opt("start"),
+            end=_opt("end"),
+            class_name=request.args.get("class_name") or None,
+            section=request.args.get("section") or None,
+            department=request.args.get("department") or None,
+            designation=request.args.get("designation") or None,
+            search=(request.args.get("q") or "").strip() or None,
+        )
+        filename = f"{report_type}_{target.isoformat()}"
+        if fmt == "json":
+            return jsonify({"title": title, "headers": headers, "rows": rows})
+        if fmt in ("excel", "xlsx"):
+            return _export_excel(rows, headers, title, filename)
+        if fmt in ("pdf",):
+            return _export_pdf(rows, headers, title, filename)
+        if fmt in ("print", "html"):
+            return _export_printable_html(rows, headers, title, filename)
+        return _export_csv(rows, headers, filename)
+
+    def _export_csv(rows, headers, filename):
+        import csv as _csv
+        import io as _io
+        buf = _io.StringIO()
+        w = _csv.writer(buf)
+        w.writerow(headers)
+        for r in rows:
+            w.writerow([r.get(h, "") for h in headers])
+        return Response(
+            buf.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}.csv"},
+        )
+
+    def _export_excel(rows, headers, title, filename):
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Alignment, Font, PatternFill
+        except ImportError:
+            return _export_csv(rows, headers, filename)
+        wb = Workbook()
+        ws = wb.active
+        ws.title = (title or "Report")[:31]
+        bold = Font(bold=True)
+        header_fill = PatternFill("solid", fgColor="007AFF")
+        white_bold = Font(bold=True, color="FFFFFFFF")
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = white_bold
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center")
+        for r in rows:
+            ws.append([r.get(h, "") for h in headers])
+        # Auto column width
+        for col_idx, header in enumerate(headers, 1):
+            max_len = len(str(header))
+            for r in rows:
+                v = str(r.get(header, ""))
+                if len(v) > max_len:
+                    max_len = len(v)
+            ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = min(max(max_len + 2, 10), 40)
+        from io import BytesIO as _B
+        buf = _B()
+        wb.save(buf)
+        return Response(
+            buf.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}.xlsx"},
+        )
+
+    def _export_pdf(rows, headers, title, filename):
+        try:
+            from reportlab.lib.pagesizes import A4, landscape
+            from reportlab.lib import colors
+            from reportlab.lib.units import cm
+            from reportlab.platypus import (
+                SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+            )
+            from reportlab.lib.styles import getSampleStyleSheet
+        except ImportError:
+            return _export_csv(rows, headers, filename)
+        from io import BytesIO as _B
+        buf = _B()
+        doc = SimpleDocTemplate(
+            buf, pagesize=landscape(A4),
+            leftMargin=1 * cm, rightMargin=1 * cm,
+            topMargin=1 * cm, bottomMargin=1 * cm,
+        )
+        styles = getSampleStyleSheet()
+        elements = [
+            Paragraph(f"<b>{title}</b>", styles["Title"]),
+            Spacer(1, 0.4 * cm),
+        ]
+        data = [headers] + [[str(r.get(h, ""))[:60] for h in headers] for r in rows]
+        if not rows:
+            data.append(["No records"] + [""] * (len(headers) - 1))
+        table = Table(data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#007AFF")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        elements.append(table)
+        doc.build(elements)
+        return Response(
+            buf.getvalue(),
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}.pdf"},
+        )
+
+    def _export_printable_html(rows, headers, title, filename):
+        body = "".join(f"<th>{h}</th>" for h in headers)
+        rows_html = "".join(
+            "<tr>" + "".join(f"<td>{r.get(h, '')}</td>" for h in headers) + "</tr>"
+            for r in rows
+        )
+        if not rows_html:
+            rows_html = f"<tr><td colspan='{len(headers)}'>No records found.</td></tr>"
+        html = f"""<!doctype html>
+<html><head><meta charset='utf-8'><title>{title}</title>
+<style>
+body {{ font-family: -apple-system, sans-serif; padding: 20px; }}
+table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
+th, td {{ border: 1px solid #d1d1d6; padding: 6px 8px; text-align: left; }}
+th {{ background: #007AFF; color: white; }}
+h1 {{ color: #1d1d1f; }}
+@media print {{ .no-print {{ display: none; }} }}
+</style></head><body>
+<h1>{title}</h1>
+<button class='no-print' onclick='window.print()' style='padding:8px 16px;background:#007AFF;color:white;border:none;border-radius:6px;cursor:pointer;'>Print</button>
+<table><thead><tr>{body}</tr></thead><tbody>{rows_html}</tbody></table>
+</body></html>"""
+        return Response(html, mimetype="text/html")
+
+    # ----------------------------------------- enterprise attendance (v2)
+    def _enterprise_row(row, kind: str) -> dict:
+        person = row.student if kind == "student" else row.teacher
+        return {"id": row.id, "type": kind, "date": row.attendance_date.isoformat(), "in_time": row.in_time.isoformat() if row.in_time else None, "out_time": row.out_time.isoformat() if row.out_time else None, "working_minutes": row.working_minutes, "break_minutes": row.break_minutes, "overtime_minutes": row.overtime_minutes, "late": row.is_late, "early_exit": row.is_early_exit, "status": row.status, "camera": row.camera.name if row.camera else None, "confidence": row.confidence, "person_id": person.id, "name": person.name, "roll_no": person.roll_no if kind == "student" else None, "class_name": person.class_name if kind == "student" else None, "section": person.section if kind == "student" else None, "employee_id": person.teacher_id if kind == "teacher" else None, "department": person.department if kind == "teacher" else None, "designation": person.designation if kind == "teacher" else None}
+
+    @app.route("/api/enterprise/attendance", methods=["GET", "POST"])
+    def api_enterprise_attendance():
+        from enterprise_query import list_sessions
+        data = request.get_json(silent=True) or {}
+        kind = (request.args.get("type") or data.get("type") or "all").lower()
+        if kind not in {"student", "teacher", "all"}:
+            return jsonify({"error": "type must be student, teacher, or all"}), 400
+
+        if request.method == "POST":
+            # Manual entry: insert an enterprise row (no camera needed).
+            from attendance_service import record_recognition
+            payload = dict(data)
+            person_kind = (payload.get("type") or "student").lower()
+            if person_kind not in {"student", "teacher"}:
+                return jsonify({"error": "type must be student or teacher"}), 400
+            try:
+                confidence = float(payload.get("confidence", 0))
+            except (TypeError, ValueError):
+                confidence = 0.0
+            from datetime import datetime as _dt
+            now = _dt.now(timezone.utc)
+            result = record_recognition(
+                person_kind,
+                int(payload["person_id"]),
+                payload.get("camera_id"),
+                confidence,
+                now=now,
+            )
+            if result.get("action") == "rejected":
+                return jsonify(result), 409
+            # Return the row we just created/updated.
+            model = StudentAttendance if person_kind == "student" else TeacherAttendance
+            row = model.query.get(result["attendance_id"])
+            return jsonify(_enterprise_row(row, person_kind)), 201
+
+        # GET: unified list across the same query engine
+        d_raw = request.args.get("date")
+        try:
+            target = datetime.strptime(d_raw, "%Y-%m-%d").date() if d_raw else date.today()
+        except ValueError:
+            return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+        # Map event_type to status for the underlying query
+        event_type = request.args.get("event_type") or None
+        status = request.args.get("status") or None
+        rows = list_sessions(
+            d=target,
+            kind=kind,
+            class_name=request.args.get("class_name") or None,
+            section=request.args.get("section") or None,
+            department=request.args.get("department") or None,
+            designation=request.args.get("designation") or None,
+            status=status,
+            event_type=event_type,
+            search=(request.args.get("q") or "").strip() or None,
+            limit=int(request.args.get("limit", 1000)),
+        )
+        return jsonify(rows)
+
+    @app.route("/api/enterprise/dashboard")
+    def api_enterprise_dashboard():
+        from enterprise_query import compute_dashboard_summary
+        d = request.args.get("date")
+        try:
+            target = datetime.strptime(d, "%Y-%m-%d").date() if d else date.today()
+        except ValueError:
+            return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+        return jsonify(compute_dashboard_summary(
+            target,
+            class_name=request.args.get("class_name") or None,
+            section=request.args.get("section") or None,
+            department=request.args.get("department") or None,
+            designation=request.args.get("designation") or None,
+        ))
+
+    @app.route("/api/enterprise/summary")
+    def api_enterprise_summary():
+        """Same as the dashboard endpoint but always for today. Powers the
+        cards on the IN/OUT page, the Time Reports preview, and any other
+        surface that needs live counts."""
+        from enterprise_query import compute_dashboard_summary
+        d = request.args.get("date")
+        try:
+            target = datetime.strptime(d, "%Y-%m-%d").date() if d else date.today()
+        except ValueError:
+            return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+        return jsonify(compute_dashboard_summary(
+            target,
+            class_name=request.args.get("class_name") or None,
+            section=request.args.get("section") or None,
+            department=request.args.get("department") or None,
+            designation=request.args.get("designation") or None,
+        ))
+
+    @app.route("/api/enterprise/widgets")
+    def api_enterprise_widgets():
+        """Additional cards / graphs (trend, top-late, top-OT, etc.)."""
+        from enterprise_query import (
+            attendance_trend, hourly_entries, top_late_students,
+            top_overtime_teachers, top_early_exits, working_hours_distribution,
+            camera_health, recognition_stats, activity_feed, class_attendance_heatmap,
+        )
+        return jsonify({
+            "trend": attendance_trend(days=7),
+            "hourly": hourly_entries(),
+            "top_late": top_late_students(),
+            "top_overtime": top_overtime_teachers(),
+            "top_early_exit": top_early_exits(),
+            "working_hours": working_hours_distribution(),
+            "camera_health": camera_health(),
+            "recognition": recognition_stats(),
+            "activity_feed": activity_feed(limit=30),
+            "heatmap": class_attendance_heatmap(days=7),
+        })
+
+    @app.route("/api/enterprise/sessions")
+    def api_enterprise_sessions():
+        """Filtered session list for the IN/OUT page."""
+        from enterprise_query import list_sessions
+        d = request.args.get("date")
+        try:
+            target = datetime.strptime(d, "%Y-%m-%d").date() if d else date.today()
+        except ValueError:
+            return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+        kind = (request.args.get("type") or "all").lower()
+        try:
+            min_conf = float(request.args.get("min_confidence")) if request.args.get("min_confidence") else None
+            max_conf = float(request.args.get("max_confidence")) if request.args.get("max_confidence") else None
+        except (TypeError, ValueError):
+            return jsonify({"error": "confidence filters must be numeric"}), 400
+        return jsonify(list_sessions(
+            d=target,
+            kind=kind,
+            class_name=request.args.get("class_name") or None,
+            section=request.args.get("section") or None,
+            department=request.args.get("department") or None,
+            designation=request.args.get("designation") or None,
+            status=request.args.get("status") or None,
+            event_type=request.args.get("event_type") or None,
+            camera_id=request.args.get("camera_id", type=int),
+            min_confidence=min_conf,
+            max_confidence=max_conf,
+            recognition_type=request.args.get("recognition_type") or None,
+            search=(request.args.get("q") or "").strip() or None,
+            limit=int(request.args.get("limit", 1000)),
+        ))
+
+    @app.route("/api/reports/preview")
+    def api_reports_preview():
+        """Return a JSON report preview that matches the exported file."""
+        from enterprise_query import build_report
+        report_type = request.args.get("type") or "daily"
+        d = request.args.get("date")
+        try:
+            target = datetime.strptime(d, "%Y-%m-%d").date() if d else date.today()
+        except ValueError:
+            return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+        def _opt(name):
+            raw = request.args.get(name)
+            if not raw:
+                return None
+            try:
+                return datetime.strptime(raw, "%Y-%m-%d").date()
+            except ValueError:
+                return None
+        rows, headers, title = build_report(
+            report_type,
+            d=target,
+            start=_opt("start"),
+            end=_opt("end"),
+            class_name=request.args.get("class_name") or None,
+            section=request.args.get("section") or None,
+            department=request.args.get("department") or None,
+            designation=request.args.get("designation") or None,
+            search=(request.args.get("q") or "").strip() or None,
+        )
+        return jsonify({
+            "title": title,
+            "headers": headers,
+            "rows": rows,
+            "summary": {
+                "total_records": len(rows),
+            },
+        })
+
+    @app.route("/api/enterprise/events")
+    def api_enterprise_events():
+        """IN/OUT feed sourced from immutable attendance_events rows."""
+        kind = (request.args.get("type") or "student").lower()
+        if kind not in {"student", "teacher"}: return jsonify({"error": "type must be student or teacher"}), 400
+        q = AttendanceEvent.query.filter_by(attendance_type=kind)
+        raw_date = request.args.get("date")
+        if raw_date:
+            try: q = q.filter(func.date(AttendanceEvent.event_time) == datetime.strptime(raw_date, "%Y-%m-%d").date())
+            except ValueError: return jsonify({"error": "date must be YYYY-MM-DD"}), 400
+        events = q.order_by(AttendanceEvent.event_time.desc()).limit(1000).all(); out = []
+        model, person_model, fk = (StudentAttendance, Student, "student_id") if kind == "student" else (TeacherAttendance, Teacher, "teacher_id")
+        for event in events:
+            row = model.query.get(event.attendance_id)
+            if row is None: continue
+            person = getattr(row, "student" if kind == "student" else "teacher")
+            if kind == "student":
+                if request.args.get("class_name") and person.class_name != request.args["class_name"]: continue
+                if request.args.get("section") and person.section != request.args["section"]: continue
+            else:
+                if request.args.get("department") and person.department != request.args["department"]: continue
+                if request.args.get("designation") and person.designation != request.args["designation"]: continue
+            data = _enterprise_row(row, kind); data.update({"event_id": event.id, "event_type": event.event_type, "event_time": event.event_time.isoformat(), "event_camera": event.camera.name if event.camera else None, "event_confidence": event.confidence})
+            out.append(data)
+        return jsonify(out)
+
+    @app.route("/api/enterprise/settings", methods=["GET", "PUT"])
+    def api_enterprise_settings():
+        keys = ["face_recognition", "qr", "rfid", "manual_attendance", "whatsapp", "sms", "email", "anti_spoofing", "liveness_detection", "unknown_face_alert"]
+        if request.method == "PUT":
+            for key, value in (request.get_json(force=True) or {}).items():
+                if key in keys:
+                    setting = AttendanceSetting.query.filter_by(key=key).first() or AttendanceSetting(key=key)
+                    setting.enabled = _coerce_bool(value); _db.session.add(setting)
+            _db.session.commit()
+        saved = {s.key: s.enabled for s in AttendanceSetting.query.all()}; return jsonify({key: saved.get(key, key == "face_recognition") for key in keys})
+
+    @app.route("/api/enterprise/time-rules/<kind>", methods=["GET", "PUT"])
+    def api_enterprise_time_rules(kind: str):
+        from database.enterprise_models import TeacherTimeRule, StudentTimeRule
+        model = {"teacher": TeacherTimeRule, "student": StudentTimeRule}.get(kind)
+        if model is None: return jsonify({"error": "kind must be teacher or student"}), 400
+        rule = model.query.first() or model(); _db.session.add(rule)
+        if request.method == "PUT":
+            data = request.get_json(force=True) or {}
+            allowed = {"office_start", "in_end_time", "office_end", "late_time", "half_day_time", "absent_after", "out_detection_start", "early_exit_time", "overtime_start", "min_working_minutes", "overtime_enabled", "gate_close_time"}
+            for key, value in data.items():
+                if key in allowed and hasattr(rule, key):
+                    old = getattr(rule, key); setattr(rule, key, value)
+                    if old != value: _db.session.add(AttendanceLog(entity_type=f"{kind}_time_rule", entity_id=rule.id or 0, field=key, old_value=str(old), new_value=str(value), reason=data.get("reason")))
+            rule.updated_at = _utcnow(); _db.session.commit()
+        return jsonify({c.name: getattr(rule, c.name) for c in rule.__table__.columns})
+
     # --------------------------------------------------------- unknown faces
     @app.route("/api/unknown-faces")
     def api_unknown_faces():
         rows = UnknownFace.query.order_by(UnknownFace.timestamp.desc()).limit(200)
         return jsonify([r.to_dict() for r in rows.all()])
+
+    @app.route("/api/unknown-faces/<int:uid>/action", methods=["POST", "DELETE"])
+    def api_unknown_face_action(uid: int):
+        """Audit-approved lifecycle actions without deleting history by default."""
+        face = UnknownFace.query.get_or_404(uid)
+        if request.method == "DELETE":
+            _db.session.add(AttendanceLog(entity_type="unknown_face", entity_id=uid, field="delete", old_value="active", new_value="deleted", reason=request.args.get("reason")))
+            _db.session.delete(face); _db.session.commit(); return jsonify({"ok": True})
+        data = request.get_json(force=True) or {}; action = (data.get("action") or "").lower()
+        if action not in {"approve", "reject", "assign_student", "assign_teacher"}:
+            return jsonify({"error": "action must be approve, reject, assign_student, or assign_teacher"}), 400
+        if action == "assign_student" and not Student.query.get(data.get("student_id")):
+            return jsonify({"error": "student not found"}), 404
+        if action == "assign_teacher" and not Teacher.query.get(data.get("teacher_id")):
+            return jsonify({"error": "teacher not found"}), 404
+        face.alerted = action in {"approve", "assign_student", "assign_teacher"}
+        _db.session.add(AttendanceLog(entity_type="unknown_face", entity_id=uid, field="action", old_value=None, new_value=action, reason=data.get("reason")))
+        _db.session.commit(); return jsonify({"ok": True, "action": action})
 
     # --------------------------------------------------------------- teachers
     @app.route("/api/teachers", methods=["GET", "POST"])
@@ -865,6 +1398,8 @@ def register_routes(app: Flask) -> None:
             assigned_classes=data.get("assigned_classes"),
             mobile=data.get("mobile"),
             email=data.get("email"),
+            department=data.get("department"),
+            designation=data.get("designation"),
             is_active=_coerce_bool(data.get("is_active", True)),
         )
         _db.session.add(t)
@@ -879,12 +1414,27 @@ def register_routes(app: Flask) -> None:
             _db.session.commit()
             return jsonify({"ok": True})
         data = request.get_json(force=True)
-        for key in ("teacher_id", "name", "subject", "assigned_classes", "mobile", "email"):
+        for key in ("teacher_id", "name", "subject", "assigned_classes", "mobile", "email", "department", "designation"):
             if key in data:
                 setattr(t, key, data[key])
         if "is_active" in data:
             t.is_active = _coerce_bool(data["is_active"])
         _db.session.commit()
+        return jsonify(t.to_dict())
+
+    @app.route("/api/teachers/<int:tid>/photo", methods=["POST"])
+    def api_teacher_photo(tid: int):
+        t = Teacher.query.get_or_404(tid)
+        if "photo" not in request.files: return jsonify({"error": "no file"}), 400
+        f = request.files["photo"]; fname = secure_filename(f"teacher_{t.teacher_id}_{f.filename}")
+        save_path = os.path.join(app.config["KNOWN_FACES_DIR"], fname); f.save(save_path)
+        embedding = encode_image(save_path)
+        if embedding is None:
+            try: os.remove(save_path)
+            except OSError: pass
+            return jsonify({"error": "no face found in image"}), 400
+        t.photo_path, t.encoding = f"known_faces/{fname}", embedding; _db.session.commit(); manager.refresh_known()
+        print(f"[RECOGNITION] teacher enrollment refreshed teacher={t.id}")
         return jsonify(t.to_dict())
 
     # ----------------------------------------------------------- MJPEG stream

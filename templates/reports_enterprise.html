@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Time Reports - Krishna English School ERP{% endblock %}
+{% block crumbs %}<i data-lucide="file-clock"></i><span>Time Reports</span>{% endblock %}
+{% block content %}
+<div class="welcome-banner"><h1>Attendance Time Reports</h1><p>Export operational attendance, late, half-day, working-hour, early-exit, and overtime reports.</p></div>
+<section class="card glass filters">
+  <div class="filter-row">
+    <div class="filter-field"><label>Report</label><select id="report-type"><option value="daily">Daily attendance</option><option value="weekly">Weekly attendance</option><option value="monthly">Monthly attendance</option><option value="late">Late arrivals</option><option value="half_day">Half days</option><option value="working_hours">Working hours</option><option value="early_exit">Early exits</option><option value="overtime">Overtime</option><option value="summary">Daily summary</option></select></div>
+    <div class="filter-field"><label>Date</label><input id="report-date" type="date"></div>
+    <div class="filter-field"><label>Format</label><select id="report-format"><option value="csv">CSV</option><option value="html">Printable HTML</option></select></div>
+    <div class="filter-field" style="align-self:end"><button id="download-report" class="btn-primary"><i data-lucide="download"></i> Export report</button></div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script>
+document.getElementById('report-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('download-report').onclick = () => {
+  const type = document.getElementById('report-type').value;
+  const date = document.getElementById('report-date').value;
+  const format = document.getElementById('report-format').value;
+  location.href = `/api/reports/${type}?date=${encodeURIComponent(date)}&format=${encodeURIComponent(format)}`;
+};
+</script>{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}IN/OUT Attendance - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="clock-4"></i><span>IN/OUT Attendance</span>
+{% endblock %}
+{% block content %}
+<section class="card glass filters">
+  <div class="filter-row">
+    <div class="filter-field"><label>Attendance Type</label><select id="filter-type"><option value="student">Student</option><option value="teacher">Teacher</option></select></div>
+    <div class="filter-field">
+      <label>Class</label>
+      <select id="filter-class">
+        <option value="">All Classes</option>
+        {% for c in CLASS_LEVELS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="filter-field teacher-filter" hidden><label>Department</label><input id="filter-department" placeholder="All departments" /></div>
+    <div class="filter-field teacher-filter" hidden><label>Designation</label><input id="filter-designation" placeholder="All designations" /></div>
+    <div class="filter-field">
+      <label>Section</label>
+      <select id="filter-section">
+        <option value="">All Sections</option>
+        {% for s in SECTIONS %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>Date</label>
+      <input id="filter-date" type="date" />
+    </div>
+    <div class="filter-field">
+      <label>Event</label>
+      <select id="filter-event">
+        <option value="">All</option>
+        <option value="in">IN</option>
+        <option value="out">OUT</option>
+      </select>
+    </div>
+    <div class="filter-field grow">
+      <label>Search</label>
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input id="filter-search" type="search" placeholder="Name or roll..." />
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2>IN/OUT Records</h2>
+    <span class="muted small" id="ext-count">--</span>
+  </div>
+  <div class="table-scroll">
+    <table id="ext-table">
+      <thead>
+        <tr id="ext-head"></tr>
+      </thead>
+      <tbody><tr><td colspan="10" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='attendance_extended.js') }}"></script>
+{% endblock %}

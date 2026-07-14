@@ -42,6 +42,8 @@
 
   // ------------------------------------------------------ active page
   function activePage() {
+    // Enterprise attendance has its own focused controller.
+    if (document.querySelector("#enterprise-attendance-table")) return "attendance_enterprise";
     const a = $(".nav-item.active");
     if (!a) return "dashboard";
     if (a.textContent.includes("Dashboard")) return "dashboard";
@@ -69,6 +71,12 @@
         $("#stat-absent").textContent = s.absent_today;
         $("#stat-unknown").textContent = s.unknown_today;
         $("#stat-cams").textContent = s.active_cameras;
+        const set = (id, value) => { const el = $(id); if (el) el.textContent = value ?? 0; };
+        set("#stat-teachers-present", s.teachers_present);
+        set("#stat-teachers-absent", s.teachers_absent);
+        set("#stat-late", s.late_today);
+        set("#stat-entries", s.today_entries);
+        set("#stat-exits", s.today_exits);
         const label = s.class_name ? `${s.class_name}${s.section ? " " + s.section : ""}` : "All Classes";
         if (scopePill) scopePill.textContent = label;
       } catch (e) { /* noop */ }
@@ -112,7 +120,7 @@
     }
 
     async function refreshAttendance() {
-      const rows = await j("/api/attendance/today");
+      const rows = await j("/api/enterprise/attendance?type=student");
       attendanceTbody.innerHTML = "";
       if (!rows.length) {
         attendanceTbody.innerHTML = `<tr><td colspan="6" class="empty">No attendance recorded today.</td></tr>`;
@@ -121,8 +129,8 @@
       rows.forEach((r) => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td>${new Date(r.timestamp).toLocaleTimeString()}</td>
-          <td>${escapeHtml(r.student_name || "")}</td>
+          <td>${r.in_time ? new Date(r.in_time).toLocaleTimeString() : "—"}</td>
+          <td>${escapeHtml(r.name || "")}</td>
           <td>${escapeHtml(r.roll_no || "")}</td>
           <td>${escapeHtml(r.class_name || "")}</td>
           <td>${escapeHtml(r.camera_name || "")}</td>
@@ -733,6 +741,7 @@
       case "dashboard":  initDashboard(); break;
       case "students":   initStudents(); break;
       case "attendance": initAttendance(); break;
+      case "attendance_enterprise": break;
       case "teachers":   initTeachers(); break;
       case "cameras":    initCameras(); break;
       case "settings":   initSettings(); break;

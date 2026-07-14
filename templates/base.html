@@ -81,6 +81,36 @@
          class="nav-item {% if active_page == 'reports' %}active{% endif %}">
         <i data-lucide="line-chart"></i><span>Reports</span>
       </a>
+
+      <div class="nav-accordion {% if active_page == 'time_rules' %}open{% endif %}">
+        <button class="nav-item nav-accordion-trigger {% if active_page == 'time_rules' %}active{% endif %}" type="button">
+          <i data-lucide="timer"></i><span>Attendance Time Management</span><i data-lucide="chevron-down" class="nav-chevron"></i>
+        </button>
+        <div class="nav-accordion-panel">
+          <a href="{{ url_for('page_time_rules', scope='teacher') }}"
+             class="nav-sub {% if active_page == 'time_rules' and active_time_scope == 'teacher' %}active{% endif %}">
+            <i data-lucide="briefcase"></i><span>Teacher Time Rules</span>
+          </a>
+          <a href="{{ url_for('page_time_rules', scope='student') }}"
+             class="nav-sub {% if active_page == 'time_rules' and active_time_scope == 'student' %}active{% endif %}">
+            <i data-lucide="graduation-cap"></i><span>Student Time Rules</span>
+          </a>
+        </div>
+      </div>
+
+      <a href="{{ url_for('page_dashboard_enterprise') }}"
+         class="nav-item {% if active_page == 'dashboard_enterprise' %}active{% endif %}">
+        <i data-lucide="gauge"></i><span>Enterprise Dashboard</span>
+      </a>
+      <a href="{{ url_for('page_reports_enterprise') }}"
+         class="nav-item {% if active_page == 'reports_enterprise' %}active{% endif %}">
+        <i data-lucide="file-clock"></i><span>Time Reports</span>
+      </a>
+      <a href="{{ url_for('page_attendance_extended') }}"
+         class="nav-item {% if active_page == 'attendance_extended' %}active{% endif %}">
+        <i data-lucide="clock-4"></i><span>IN/OUT Attendance</span>
+      </a>
+
       <a href="{{ url_for('page_settings') }}"
          class="nav-item {% if active_page == 'settings' %}active{% endif %}">
         <i data-lucide="settings"></i><span>Settings</span>

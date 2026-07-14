@@ -12,14 +12,14 @@ import platform
 import re
 import threading
 import time
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 import cv2
 import numpy as np
 
 from database.db import db
-from database.models import Attendance, Student
+from database.models import Student, Teacher
 
 from .encoder import detect_faces
 
@@ -52,10 +52,10 @@ class FaceRecognizer:
 
         # Cached DB state (refreshed on demand).
         self._known_embeddings: list[np.ndarray] = []
-        self._known_meta: list[tuple[int, str, str]] = []
+        self._known_meta: list[tuple[str, int, str, str]] = []
 
         # Per-student "last marked at" timestamps for cooldown.
-        self._last_seen: dict[int, datetime] = {}
+        self._last_seen: dict[tuple[str, int], datetime] = {}
 
         self.lock = threading.Lock()
         self.last_frame: Optional[np.ndarray] = None
@@ -97,55 +97,55 @@ class FaceRecognizer:
     # ------------------------------------------------------------------ DB
     def refresh_known_faces(self) -> None:
         """Reload embeddings + metadata from the database."""
-        students = Student.query.all()
+        students = Student.query.filter_by(is_active=True).all()
+        teachers = Teacher.query.filter_by(is_active=True).all()
         embeddings: list[np.ndarray] = []
-        meta: list[tuple[int, str, str]] = []
+        meta: list[tuple[str, int, str, str]] = []
         for student in students:
             if student.encoding:
-                embeddings.append(np.asarray(student.encoding, dtype=np.float32))
-                meta.append((student.id, student.name, student.roll_no))
+                vector = np.asarray(student.encoding, dtype=np.float32).reshape(-1)
+                if vector.size != 512 or not np.isfinite(vector).all():
+                    print(f"[RECOGNITION] skipped student id={student.id}: invalid embedding length={vector.size}; re-enroll this face")
+                    continue
+                embeddings.append(vector)
+                meta.append(("student", student.id, student.name, student.roll_no))
+        for teacher in teachers:
+            if teacher.encoding:
+                vector = np.asarray(teacher.encoding, dtype=np.float32).reshape(-1)
+                if vector.size != 512 or not np.isfinite(vector).all():
+                    print(f"[RECOGNITION] skipped teacher id={teacher.id}: invalid embedding length={vector.size}; re-enroll this face")
+                    continue
+                embeddings.append(vector)
+                meta.append(("teacher", teacher.id, teacher.name, teacher.teacher_id))
 
         with self.lock:
             self._known_embeddings = embeddings
             self._known_meta = meta
+        print(f"[RECOGNITION] known faces loaded: students={sum(item[0] == 'student' for item in meta)} teachers={sum(item[0] == 'teacher' for item in meta)}")
 
-    def _mark_attendance(self, student_id: int, similarity: float) -> Optional[Attendance]:
-        """Insert one attendance row, respecting per-student cooldown."""
+    def _mark_attendance(self, person_type: str, person_id: int, similarity: float) -> None:
+        """Write live recognition only to enterprise attendance tables."""
         now = _utcnow()
-        last = self._last_seen.get(student_id)
+        key = (person_type, person_id)
+        last = self._last_seen.get(key)
         if last and (now - last).total_seconds() < self.cooldown:
-            return None
-
-        already_today = (
-            Attendance.query.filter_by(student_id=student_id)
-            .filter(db.func.date(Attendance.timestamp) == date.today())
-            .first()
-        )
-        if already_today:
-            self._last_seen[student_id] = now
-            return None
-
-        record = Attendance(
-            student_id=student_id,
-            camera_id=self.camera_id,
-            timestamp=now,
-            confidence=float(similarity),
-            status="present",
-        )
-        db.session.add(record)
-        db.session.commit()
-        self._last_seen[student_id] = now
-        return record
+            print(f"[ATTENDANCE] rejected {person_type}={person_id}: cooldown ({self.cooldown}s)")
+            return
+        try:
+            from attendance_service import record_recognition
+            record_recognition(person_type, person_id, self.camera_id, similarity)
+            self._last_seen[key] = now
+        except Exception as exc:
+            db.session.rollback()
+            print(f"[ATTENDANCE] failure {person_type}={person_id}: {type(exc).__name__}: {exc}")
 
     # -------------------------------------------------------------- per frame
     def _process_frame(self, frame: np.ndarray) -> list[dict]:
         """Run detection + matching on a single frame."""
-        # [DEBUG] running detection on the current frame.
-        print("[DEBUG] Running detect_faces()")
+        print("[PIPELINE] camera frame received; running face detection")
         # ``detect_faces`` already returns ``(box, embedding)`` pairs.
         faces = detect_faces(frame)
-        # [DEBUG] how many faces were detected this frame.
-        print(f"[DEBUG] Faces detected={len(faces)}")
+        print(f"[PIPELINE] camera detected faces={len(faces)}")
 
         with self.lock:
             known = list(self._known_embeddings)
@@ -161,10 +161,15 @@ class FaceRecognizer:
                 sims = np.asarray(known) @ embedding_np
                 best = int(np.argmax(sims))
                 if sims[best] >= self.threshold:
-                    student_id, student_name, student_roll = meta[best]
-                    name, roll = student_name, student_roll
+                    person_type, person_id, person_name, person_code = meta[best]
+                    name, roll = person_name, person_code
                     similarity = float(sims[best])
-                    self._mark_attendance(student_id, similarity)
+                    print(f"[RECOGNITION] matched {person_type} id={person_id} name={name} confidence={similarity:.3f}")
+                    self._mark_attendance(person_type, person_id, similarity)
+                else:
+                    print(f"[RECOGNITION] face rejected: confidence={float(sims[best]):.3f} threshold={self.threshold:.3f}")
+            else:
+                print("[RECOGNITION] face rejected: no enrolled student or teacher encodings")
 
             detections.append(
                 {

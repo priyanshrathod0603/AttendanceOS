@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Enterprise Dashboard - Krishna English School ERP{% endblock %}
+{% block crumbs %}
+  <i data-lucide="gauge"></i><span>Enterprise Dashboard</span>
+{% endblock %}
+{% block content %}
+<div class="welcome-banner">
+  <h1>Enterprise Attendance Dashboard <i data-lucide="gauge" class="lucide-icon" style="vertical-align:middle"></i></h1>
+  <p>Real-time IN/OUT, working hours, overtime, and compliance metrics.</p>
+</div>
+
+<section class="stats" id="ent-stats">
+  <div class="stat-card glass" data-key="present">
+    <div class="stat-icon green"><i data-lucide="user-check"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Present</div>
+      <div class="stat-value" id="ent-present">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="late">
+    <div class="stat-icon amber"><i data-lucide="alarm-clock"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Late</div>
+      <div class="stat-value" id="ent-late">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="half_day">
+    <div class="stat-icon amber"><i data-lucide="clock"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Half Day</div>
+      <div class="stat-value" id="ent-half">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="absent">
+    <div class="stat-icon red"><i data-lucide="user-x"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Absent</div>
+      <div class="stat-value" id="ent-absent">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="early_exit">
+    <div class="stat-icon red"><i data-lucide="log-out"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Early Exit</div>
+      <div class="stat-value" id="ent-early">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="overtime">
+    <div class="stat-icon purple"><i data-lucide="timer"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Overtime</div>
+      <div class="stat-value" id="ent-ot">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="inside">
+    <div class="stat-icon green"><i data-lucide="door-open"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Currently Inside</div>
+      <div class="stat-value" id="ent-inside">—</div>
+      <div class="stat-trend">live</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="outside">
+    <div class="stat-icon purple"><i data-lucide="door-closed"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Currently Outside</div>
+      <div class="stat-value" id="ent-outside">—</div>
+      <div class="stat-trend">after OUT</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="unknown">
+    <div class="stat-icon red"><i data-lucide="help-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Unknown Faces</div>
+      <div class="stat-value" id="ent-unknown">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="cams">
+    <div class="stat-icon blue"><i data-lucide="video"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Active Cameras</div>
+      <div class="stat-value" id="ent-cams">—</div>
+      <div class="stat-trend">live</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="avg_in">
+    <div class="stat-icon blue"><i data-lucide="log-in"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Average IN Time</div>
+      <div class="stat-value" id="ent-avg-in">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+  <div class="stat-card glass" data-key="avg_out">
+    <div class="stat-icon purple"><i data-lucide="log-out"></i></div>
+    <div class="stat-body">
+      <div class="stat-label">Average OUT Time</div>
+      <div class="stat-value" id="ent-avg-out">—</div>
+      <div class="stat-trend">today</div>
+    </div>
+  </div>
+</section>
+
+<section class="card glass hero-pct">
+  <div class="card-head">
+    <h2><i data-lucide="percent-circle"></i> Today's Attendance %</h2>
+    <span class="muted small" id="ent-date">—</span>
+  </div>
+  <div class="pct-display">
+    <span class="pct-value" id="ent-attendance-pct">—</span>
+    <div class="pct-bar"><div id="ent-attendance-pct-bar"></div></div>
+  </div>
+</section>
+
+<div class="two-col">
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="trending-up"></i> Attendance Trend (7 days)</h2>
+    </div>
+    <div id="ent-trend" class="trend-list"><div class="empty">Loading...</div></div>
+  </section>
+
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="bar-chart-2"></i> Hourly Entry Graph</h2>
+    </div>
+    <div id="ent-hourly" class="hourly-graph"><div class="empty">Loading...</div></div>
+  </section>
+</div>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2>Today's Working Hours &amp; Overtime</h2>
+  </div>
+  <div class="table-scroll">
+    <table id="ent-sessions-table">
+      <thead>
+        <tr>
+          <th>Name</th><th>Class / Dept</th><th>IN</th><th>OUT</th>
+          <th>Working</th><th>OT</th><th>Status</th><th>Camera</th>
+        </tr>
+      </thead>
+      <tbody><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<div class="two-col">
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="alarm-clock"></i> Top Late Students (30d)</h2>
+    </div>
+    <ul id="ent-top-late" class="top-list"><li class="empty">Loading...</li></ul>
+  </section>
+
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="timer"></i> Top Overtime Teachers (30d)</h2>
+    </div>
+    <ul id="ent-top-ot" class="top-list"><li class="empty">Loading...</li></ul>
+  </section>
+
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="log-out"></i> Top Early Exit (30d)</h2>
+    </div>
+    <ul id="ent-top-early" class="top-list"><li class="empty">Loading...</li></ul>
+  </section>
+
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="bar-chart-3"></i> Working Hours Distribution</h2>
+    </div>
+    <div id="ent-wh" class="wh-list"><div class="empty">Loading...</div></div>
+  </section>
+</div>
+
+<div class="two-col">
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="activity"></i> Realtime Activity Feed</h2>
+    </div>
+    <ul id="ent-feed" class="feed-list"><li class="empty">Loading...</li></ul>
+  </section>
+
+  <section class="card glass">
+    <div class="card-head">
+      <h2><i data-lucide="cpu"></i> Recognition Stats</h2>
+    </div>
+    <div id="ent-recog" class="recog-list"><div class="empty">Loading...</div></div>
+  </section>
+</div>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2><i data-lucide="video"></i> Camera Health</h2>
+  </div>
+  <div id="ent-cam-health" class="cam-health"><div class="empty">Loading...</div></div>
+</section>
+
+<section class="card glass">
+  <div class="card-head">
+    <h2><i data-lucide="calendar-heatmap"></i> Attendance Heatmap (7 days × class)</h2>
+  </div>
+  <div id="ent-heatmap" class="heatmap-wrap">
+    <div class="empty">Loading...</div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='enterprise_dashboard.js') }}"></script>
+{% endblock %}

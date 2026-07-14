@@ -2,74 +2,14 @@
 {% block title %}Attendance - Krishna English School ERP{% endblock %}
 {% block crumbs %}<i data-lucide="calendar-check"></i><span>Attendance</span>{% endblock %}
 {% block content %}
-<section class="card glass filters">
-  <div class="filter-row">
-    <div class="filter-field">
-      <label>Class</label>
-      <select id="filter-class">
-        <option value="">All Classes</option>
-        {% for c in CLASS_LEVELS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-      </select>
-    </div>
-    <div class="filter-field">
-      <label>Section</label>
-      <select id="filter-section">
-        <option value="">All Sections</option>
-        {% for s in SECTIONS %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-      </select>
-    </div>
-    <div class="filter-field">
-      <label>Date</label>
-      <input id="filter-date" type="date" />
-    </div>
-    <div class="filter-field">
-      <label>Camera</label>
-      <select id="filter-camera">
-        <option value="">All Cameras</option>
-      </select>
-    </div>
-    <div class="filter-field grow">
-      <label>Search</label>
-      <div class="search">
-        <i data-lucide="search"></i>
-        <input id="filter-search" type="search" placeholder="Search student name or roll..." />
-      </div>
-    </div>
-    <div class="filter-field">
-      <label>&nbsp;</label>
-      <div class="btn-row">
-        <button id="btn-export-csv" class="btn-secondary">
-          <i data-lucide="file-spreadsheet"></i> Excel
-        </button>
-        <button id="btn-export-pdf" class="btn-secondary">
-          <i data-lucide="file-text"></i> PDF
-        </button>
-        <button id="btn-print" class="btn-secondary">
-          <i data-lucide="printer"></i> Print
-        </button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="card glass">
-  <div class="card-head">
-    <h2>Attendance Records</h2>
-    <span class="muted small" id="attendance-count">--</span>
-  </div>
-  <div class="table-scroll">
-    <table id="attendance-table">
-      <thead>
-        <tr>
-          <th>Time</th><th>Roll</th><th>Name</th><th>Class</th><th>Section</th>
-          <th>Camera</th><th>Confidence</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="8" class="empty">Loading attendance...</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="pager" id="attendance-pager"></div>
-</section>
+<section class="card glass filters"><div class="filter-row">
+  <div class="filter-field"><label>Attendance Type</label><select id="attendance-type"><option value="student">Student</option><option value="teacher">Teacher</option></select></div>
+  <div class="filter-field student-filter"><label>Class</label><select id="filter-class"><option value="">All Classes</option>{% for c in CLASS_LEVELS %}<option>{{ c }}</option>{% endfor %}</select></div>
+  <div class="filter-field student-filter"><label>Section</label><select id="filter-section"><option value="">All Sections</option>{% for s in SECTIONS %}<option>{{ s }}</option>{% endfor %}</select></div>
+  <div class="filter-field teacher-filter" hidden><label>Department</label><input id="filter-department" placeholder="All departments"></div>
+  <div class="filter-field teacher-filter" hidden><label>Designation</label><input id="filter-designation" placeholder="All designations"></div>
+  <div class="filter-field"><label>Date</label><input id="filter-date" type="date"></div>
+</div></section>
+<section class="card glass"><div class="card-head"><h2 id="attendance-heading">Student Attendance</h2><span id="attendance-count" class="muted small"></span></div><div class="table-scroll"><table id="enterprise-attendance-table"><thead></thead><tbody><tr><td class="empty">Loading attendance...</td></tr></tbody></table></div></section>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='attendance_v2.js') }}"></script>{% endblock %}
