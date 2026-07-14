@@ -1,29 +1,16 @@
 (() => {
   "use strict";
   const scope = location.pathname.endsWith("/teacher") ? "teacher" : "student";
-  const labels = scope === "teacher" ? {
-    office_start: "Office Start Time", late_grace_time: "Late Grace Time",
-    half_day_time: "Half Day Time", absent_after_time: "Absent After Time",
-    office_end: "Office End Time", out_start: "OUT Detection Start Time",
-    min_working_hours: "Minimum Working Hours (minutes)",
-    max_break_minutes: "Maximum Break Time (minutes)",
-    max_late_per_month: "Maximum Late Per Month", overtime_start: "Overtime Start Time",
-    early_exit_time: "Early Exit Time",
-  } : {
-    office_start: "School Start Time", late_grace_time: "Late Time",
-    half_day_time: "Half Day Time", absent_after_time: "Absent Time",
-    office_end: "School End Time", out_start: "OUT Detection Start Time",
+  const labels = {
+    office_start: scope === "teacher" ? "Office Start Time" : "School Start Time",
+    in_end_time: "IN Window Ends", late_time: "Late Threshold",
+    half_day_time: "Half-Day Arrival Threshold", absent_after: "Absent-After Threshold",
+    office_end: scope === "teacher" ? "Office End Time" : "School End Time",
+    out_detection_start: "OUT Detection Start", early_exit_time: "Early Exit Threshold",
+    overtime_start: "Overtime Threshold", min_working_minutes: "Minimum Working Minutes",
+    ...(scope === "student" ? { gate_close_time: "Gate Close Time" } : {}),
   };
-  const toggles = scope === "teacher" ? {
-    enable_in: "Enable IN Detection", enable_out: "Enable OUT Detection",
-    enable_working_hours: "Enable Working Hours", enable_overtime: "Enable Overtime",
-    enable_early_exit: "Enable Early Exit", enable_multi_entry: "Enable Multiple Entry Detection",
-    enable_unknown_alert: "Enable Unknown Face Alert", enable_notifications: "Enable Notifications",
-  } : {
-    enable_out: "Enable OUT Detection", enable_working_hours: "Enable Working Hours",
-    enable_parent_notifications: "Enable Parent Notifications", enable_late_alert: "Enable Late Alert",
-    enable_half_day: "Enable Half Day",
-  };
+  const toggles = { overtime_enabled: "Enable Overtime Calculation" };
   let rules = null;
   const e = window.escapeHtml || ((v) => String(v));
   const request = window.j;
@@ -31,7 +18,7 @@
   function refreshIcons() { if (window.lucide) lucide.createIcons(); }
   async function save(changes, message = "Rules saved") {
     try {
-      rules = await request(`/api/time-rules/${scope}`, {
+      rules = await request(`/api/enterprise/time-rules/${scope}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...changes, reason: "Updated from time rules" }),
       });
@@ -40,7 +27,7 @@
     } catch (err) { window.showResult({ title: "Save failed", ok: false, message: err.message }); }
   }
   function editField(key, label) {
-    const isNumber = ["min_working_hours", "max_break_minutes", "max_late_per_month"].includes(key);
+    const isNumber = key === "min_working_minutes";
     window.openFormModal({ title: `Edit ${label}`, fields: [{ name: key, label, type: isNumber ? "number" : "time", required: true }], initial: rules,
       onSave: (values) => save({ [key]: isNumber ? Number(values[key]) : values[key] }) });
   }
@@ -50,15 +37,7 @@
       <div class="rule-row"><div><strong>${e(label)}</strong><div class="muted small">${e(rules[key] ?? "—")}</div></div>
       <button class="btn-secondary edit-rule" data-key="${key}" data-label="${e(label)}"><i data-lucide="pencil"></i>Edit</button></div>`).join("");
     document.querySelectorAll(".edit-rule").forEach((b) => b.onclick = () => editField(b.dataset.key, b.dataset.label));
-    const off = String(rules.weekly_off || "").split(",");
-    document.querySelector("#weekly-off").innerHTML = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) =>
-      `<label><input type="checkbox" value="${i}" ${off.includes(String(i)) ? "checked" : ""}> ${day}</label>`).join("") +
-      '<button class="btn-primary" id="save-weekly-off">Save</button><button class="btn-secondary" id="reset-rules">Reset all</button>';
-    document.querySelector("#save-weekly-off").onclick = () => save({ weekly_off: [...document.querySelectorAll("#weekly-off input:checked")].map(x => x.value).join(",") });
-    document.querySelector("#reset-rules").onclick = async () => {
-      if (!confirm("Reset this scope to its default rules?")) return;
-      try { rules = await request(`/api/time-rules/${scope}/reset`, { method: "POST" }); render(); } catch (err) { window.showResult({ title: "Reset failed", ok: false, message: err.message }); }
-    };
+    document.querySelector("#weekly-off").innerHTML = '<span class="muted">Weekly offs are managed from the school calendar and do not override these attendance thresholds.</span>';
     document.querySelector("#toggle-rows").innerHTML = Object.entries(toggles).map(([key, label]) => `
       <div class="rule-row"><strong>${e(label)}</strong><label class="switch"><input type="checkbox" data-toggle="${key}" ${rules[key] ? "checked" : ""}><span></span></label></div>`).join("");
     document.querySelectorAll("[data-toggle]").forEach((input) => input.onchange = () => save({ [input.dataset.toggle]: input.checked }));
@@ -77,5 +56,5 @@
     { name: "holiday_date", label: "Date", type: "date", required: true }, { name: "name", label: "Holiday name", required: true },
     { name: "kind", label: "Type", type: "select", options: [{v:"national",t:"National"},{v:"school",t:"School"},{v:"emergency",t:"Emergency"}] },
   ], onSave: async values => { await request("/api/holidays", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({...values, scope}) }); loadHolidays(); loadAudit(); } });
-  request(`/api/time-rules/${scope}`).then((data) => { rules = data; render(); }).catch((err) => window.showResult({ title: "Could not load rules", ok: false, message: err.message }));
+  request(`/api/enterprise/time-rules/${scope}`).then((data) => { rules = data; render(); }).catch((err) => window.showResult({ title: "Could not load rules", ok: false, message: err.message }));
 })();

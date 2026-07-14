@@ -951,7 +951,7 @@ def register_routes(app: Flask) -> None:
     @app.route("/api/reports/export")
     def api_reports_export():
         """Export a report in CSV / Excel / PDF / Print (HTML)."""
-        from enterprise_query import build_report
+        from enterprise_query import build_report, compute_dashboard_summary
         report_type = request.args.get("type") or "daily"
         fmt = (request.args.get("format") or "csv").lower()
         d_raw = request.args.get("date")
@@ -977,6 +977,7 @@ def register_routes(app: Flask) -> None:
             department=request.args.get("department") or None,
             designation=request.args.get("designation") or None,
             search=(request.args.get("q") or "").strip() or None,
+            person_type=request.args.get("person_type") or None,
         )
         filename = f"{report_type}_{target.isoformat()}"
         if fmt == "json":
@@ -1261,7 +1262,7 @@ h1 {{ color: #1d1d1f; }}
     @app.route("/api/reports/preview")
     def api_reports_preview():
         """Return a JSON report preview that matches the exported file."""
-        from enterprise_query import build_report
+        from enterprise_query import build_report, compute_dashboard_summary
         report_type = request.args.get("type") or "daily"
         d = request.args.get("date")
         try:
@@ -1286,14 +1287,23 @@ h1 {{ color: #1d1d1f; }}
             department=request.args.get("department") or None,
             designation=request.args.get("designation") or None,
             search=(request.args.get("q") or "").strip() or None,
+            person_type=request.args.get("person_type") or None,
         )
+        summary = compute_dashboard_summary(
+            target,
+            class_name=request.args.get("class_name") or None,
+            section=request.args.get("section") or None,
+            department=request.args.get("department") or None,
+            designation=request.args.get("designation") or None,
+        )
+        # The preview's total is the rows currently being shown (for example,
+        # only late arrivals), while the other cards remain live daily KPIs.
+        summary["total_records"] = len(rows)
         return jsonify({
             "title": title,
             "headers": headers,
             "rows": rows,
-            "summary": {
-                "total_records": len(rows),
-            },
+            "summary": summary,
         })
 
     @app.route("/api/enterprise/events")

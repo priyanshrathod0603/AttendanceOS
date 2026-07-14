@@ -9,6 +9,7 @@ Enterprise Dashboard, the IN/OUT page, and the Time Reports preview.
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
+import re
 from typing import Optional
 
 from sqlalchemy import and_, func, or_
@@ -75,6 +76,23 @@ def _parse_hhmm(value: Optional[str], default: str) -> time:
 
 def _to_minutes(t: time) -> int:
     return t.hour * 60 + t.minute
+
+
+def _session_flags(row, rules) -> dict[str, bool]:
+    """Return non-exclusive compliance flags for a completed session.
+
+    ``status`` is intentionally a single display value, so it cannot safely
+    represent facts such as "half day and early exit" at the same time.  All
+    aggregate calculations use these rule-based flags instead.
+    """
+    min_working = int(getattr(rules, "min_working_minutes", 480) or 480)
+    return {
+        "present": row.in_time is not None,
+        "late": bool(row.is_late) or row.status == "late",
+        "half_day": bool(row.out_time and (row.working_minutes or 0) < min_working) or row.status == "half_day",
+        "early_exit": bool(row.is_early_exit) or row.status == "early_exit",
+        "overtime": bool((row.overtime_minutes or 0) > 0 or row.status == "overtime"),
+    }
 
 
 # --------------------------------------------------------------------- holidays
@@ -152,21 +170,16 @@ def compute_dashboard_summary(
     teacher_sessions = _teacher_attendance_query(target, department=department, designation=designation).all()
     sessions = student_sessions + teacher_sessions
 
-    present = sum(
-        1 for s in sessions if s.status in {"present", "late", "overtime", "early_exit", "half_day"}
-    )
-    late = sum(1 for s in sessions if s.is_late or s.status == "late")
-    half_day = sum(1 for s in sessions if s.is_late or s.status == "half_day")  # stored as is_late=True with status=half_day OR explicit
-    # We treat is_late==True & status==half_day as half_day specifically
-    half_day = sum(1 for s in sessions if s.status == "half_day")
-    early_exit = sum(1 for s in sessions if s.is_early_exit or s.status == "early_exit")
-    overtime = sum(1 for s in sessions if (s.overtime_minutes or 0) > 0 or s.status == "overtime")
+    flagged = [(s, _session_flags(s, rules_stu if s in student_sessions else rules_tea)) for s in sessions]
+    present = sum(1 for _, flags in flagged if flags["present"])
+    late = sum(1 for _, flags in flagged if flags["late"])
+    half_day = sum(1 for _, flags in flagged if flags["half_day"])
+    early_exit = sum(1 for _, flags in flagged if flags["early_exit"])
+    overtime = sum(1 for _, flags in flagged if flags["overtime"])
     currently_inside = sum(1 for s in sessions if s.in_time is not None and s.out_time is None)
     currently_outside = sum(1 for s in sessions if s.in_time is not None and s.out_time is not None)
-    absent = max(total_students - sum(1 for s in student_sessions if s.status != "absent"), 0)
-    if not (class_name or section):
-        # No filter; absent is total students without an attendance row today.
-        absent = max(total_students - sum(1 for s in student_sessions), 0)
+    # Absence is defined by a missing IN record, not merely a missing row.
+    absent = max(total_students - sum(1 for s in student_sessions if s.in_time is not None), 0)
 
     unknown_today = UnknownFace.query.filter(func.date(UnknownFace.timestamp) == target).count()
 
@@ -292,7 +305,7 @@ def list_sessions(
             continue
         if event_type == "late" and not r.get("is_late"):
             continue
-        if event_type == "half_day" and r.get("status") != "half_day":
+        if event_type == "half_day" and not r.get("is_half_day"):
             continue
         if event_type == "early_exit" and not r.get("is_early_exit"):
             continue
@@ -331,6 +344,7 @@ def _session_to_dict(row, kind: str) -> dict:
             "break_minutes": row.break_minutes or 0,
             "overtime_minutes": row.overtime_minutes or 0,
             "is_late": bool(row.is_late),
+            "is_half_day": _session_flags(row, StudentTimeRule.query.first() or StudentTimeRule())["half_day"],
             "is_early_exit": bool(row.is_early_exit),
             "status": row.status,
             "camera_id": row.camera_id,
@@ -357,6 +371,7 @@ def _session_to_dict(row, kind: str) -> dict:
         "break_minutes": row.break_minutes or 0,
         "overtime_minutes": row.overtime_minutes or 0,
         "is_late": bool(row.is_late),
+        "is_half_day": _session_flags(row, TeacherTimeRule.query.first() or TeacherTimeRule())["half_day"],
         "is_early_exit": bool(row.is_early_exit),
         "status": row.status,
         "camera_id": row.camera_id,
@@ -377,6 +392,7 @@ def build_report(
     department: Optional[str] = None,
     designation: Optional[str] = None,
     search: Optional[str] = None,
+    person_type: Optional[str] = None,
 ) -> tuple[list[dict], list[str], str]:
     """Return ``(rows, headers, title)`` for a given report type.
 
@@ -436,8 +452,8 @@ def build_report(
         if designation:
             teacher_q = teacher_q.filter(Teacher.designation == designation)
 
-    student_rows = student_q.all()
-    teacher_rows = teacher_q.all()
+    student_rows = student_q.all() if person_type in (None, "", "all", "student") else []
+    teacher_rows = teacher_q.all() if person_type in (None, "", "all", "teacher") else []
 
     # Filter rows by report type
     def keep(row, is_student: bool) -> bool:
@@ -563,13 +579,15 @@ def _build_summary_report(rows: list[dict], start: date, end: date) -> list[dict
 def _parse_minutes(text: str) -> int:
     if not text:
         return 0
-    total = 0
-    for chunk in str(text).replace("m", "").replace("h", " ").split():
-        try:
-            total += int(chunk)
-        except ValueError:
-            return 0
-    return total
+    value = str(text).strip().lower()
+    hours = re.search(r"(\d+)\s*h", value)
+    minutes = re.search(r"(\d+)\s*m", value)
+    if hours or minutes:
+        return (int(hours.group(1)) * 60 if hours else 0) + (int(minutes.group(1)) if minutes else 0)
+    try:
+        return int(value)
+    except ValueError:
+        return 0
 
 
 def _build_class_report(rows: list[dict]) -> list[dict]:

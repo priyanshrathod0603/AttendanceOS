@@ -6,7 +6,7 @@
 {% block content %}
 <section class="card glass filters">
   <div class="filter-row">
-    <div class="filter-field"><label>Attendance Type</label><select id="filter-type"><option value="student">Student</option><option value="teacher">Teacher</option></select></div>
+    <div class="filter-field"><label>Attendance Type</label><select id="filter-type"><option value="all">All people</option><option value="student">Student</option><option value="teacher">Teacher</option></select></div>
     <div class="filter-field">
       <label>Class</label>
       <select id="filter-class">
@@ -33,8 +33,17 @@
         <option value="">All</option>
         <option value="in">IN</option>
         <option value="out">OUT</option>
+        <option value="late">Late</option>
+        <option value="half_day">Half Day</option>
+        <option value="early_exit">Early Exit</option>
+        <option value="overtime">Overtime</option>
       </select>
     </div>
+    <div class="filter-field"><label>Camera ID</label><input id="filter-camera" type="number" min="1" placeholder="All cameras"></div>
+    <div class="filter-field"><label>Min working (min)</label><input id="filter-min-working" type="number" min="0"></div>
+    <div class="filter-field"><label>Max working (min)</label><input id="filter-max-working" type="number" min="0"></div>
+    <div class="filter-field"><label>Min confidence</label><input id="filter-min-confidence" type="number" step="0.01" min="0" max="1"></div>
+    <div class="filter-field"><label>Max confidence</label><input id="filter-max-confidence" type="number" step="0.01" min="0" max="1"></div>
     <div class="filter-field grow">
       <label>Search</label>
       <div class="search">

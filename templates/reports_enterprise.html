@@ -2,22 +2,30 @@
 {% block title %}Time Reports - Krishna English School ERP{% endblock %}
 {% block crumbs %}<i data-lucide="file-clock"></i><span>Time Reports</span>{% endblock %}
 {% block content %}
-<div class="welcome-banner"><h1>Attendance Time Reports</h1><p>Export operational attendance, late, half-day, working-hour, early-exit, and overtime reports.</p></div>
+<div class="welcome-banner"><h1>Attendance Time Reports</h1><p>Preview live attendance data before exporting it.</p></div>
 <section class="card glass filters">
   <div class="filter-row">
-    <div class="filter-field"><label>Report</label><select id="report-type"><option value="daily">Daily attendance</option><option value="weekly">Weekly attendance</option><option value="monthly">Monthly attendance</option><option value="late">Late arrivals</option><option value="half_day">Half days</option><option value="working_hours">Working hours</option><option value="early_exit">Early exits</option><option value="overtime">Overtime</option><option value="summary">Daily summary</option></select></div>
+    <div class="filter-field"><label>Report</label><select id="report-type"><option value="daily">Daily Attendance</option><option value="weekly">Weekly Attendance</option><option value="monthly">Monthly Attendance</option><option value="yearly">Yearly Attendance</option><option value="late">Late Arrivals</option><option value="half_day">Half Day</option><option value="working_hours">Working Hours</option><option value="early_exit">Early Exit</option><option value="overtime">Overtime</option><option value="summary">Attendance Summary</option><option value="class">Class-wise</option><option value="department">Department-wise</option></select></div>
     <div class="filter-field"><label>Date</label><input id="report-date" type="date"></div>
-    <div class="filter-field"><label>Format</label><select id="report-format"><option value="csv">CSV</option><option value="html">Printable HTML</option></select></div>
-    <div class="filter-field" style="align-self:end"><button id="download-report" class="btn-primary"><i data-lucide="download"></i> Export report</button></div>
+    <div class="filter-field"><label>Attendance Type</label><select id="report-person-type"><option value="all">All people</option><option value="student">Students</option><option value="teacher">Teachers</option></select></div>
+    <div class="filter-field"><label>Class</label><select id="report-class"><option value="">All classes</option>{% for c in CLASS_LEVELS %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select></div>
+    <div class="filter-field"><label>Section</label><select id="report-section"><option value="">All sections</option>{% for s in SECTIONS %}<option value="{{ s }}">{{ s }}</option>{% endfor %}</select></div>
+    <div class="filter-field"><label>Department</label><input id="report-department" placeholder="All departments"></div>
+    <div class="filter-field"><label>Designation</label><input id="report-designation" placeholder="All designations"></div>
+    <div class="filter-field"><label>Student / Teacher</label><input id="report-search" placeholder="Name, roll, employee ID"></div>
+    <div class="filter-field" style="align-self:end"><button id="generate-report" class="btn-primary"><i data-lucide="refresh-cw"></i> Generate Report</button></div>
+    <div class="filter-field" style="align-self:end"><select id="report-format"><option value="csv">CSV</option><option value="excel">Excel</option><option value="pdf">PDF</option><option value="print">Print</option></select></div>
+    <div class="filter-field" style="align-self:end"><button id="download-report" class="btn-secondary"><i data-lucide="download"></i> Export</button></div>
   </div>
 </section>
+<section class="stats" id="report-summary">
+  {% for id, label in [('total_records','Total Records'), ('present','Present'), ('late','Late'), ('half_day','Half Day'), ('absent','Absent'), ('early_exit','Early Exit'), ('overtime','Overtime')] %}
+  <div class="stat-card glass"><div class="stat-body"><div class="stat-label">{{ label }}</div><div class="stat-value" id="report-{{ id }}">0</div></div></div>
+  {% endfor %}
+</section>
+<section class="card glass" id="report-preview">
+  <div class="card-head"><h2 id="report-title">Report Preview</h2><span class="muted small" id="report-count">Generate a report to view records.</span></div>
+  <div class="table-scroll"><table id="report-table"><thead></thead><tbody><tr><td class="empty">No attendance records found.</td></tr></tbody></table></div>
+</section>
 {% endblock %}
-{% block scripts %}<script>
-document.getElementById('report-date').value = new Date().toISOString().slice(0,10);
-document.getElementById('download-report').onclick = () => {
-  const type = document.getElementById('report-type').value;
-  const date = document.getElementById('report-date').value;
-  const format = document.getElementById('report-format').value;
-  location.href = `/api/reports/${type}?date=${encodeURIComponent(date)}&format=${encodeURIComponent(format)}`;
-};
-</script>{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='reports_enterprise.js') }}"></script>{% endblock %}

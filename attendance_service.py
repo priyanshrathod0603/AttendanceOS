@@ -95,15 +95,17 @@ def _recompute_out_fields(row, rules, now: datetime) -> None:
     # Break time is implicit; no separate break events are recorded yet.
     row.break_minutes = 0
 
-    # Half-day: working time < min_working_minutes when OUT has been recorded
+    # A half-day is a completed session shorter than the configured minimum.
+    # Keep this independent from the late flag: a person can be both late and
+    # half-day, and the dashboard/report layer exposes both facts.
     if row.out_time:
         try:
             min_working = int(getattr(rules, "min_working_minutes", 480))
         except (TypeError, ValueError):
             min_working = 480
-        row.is_late = row.is_late or (row.working_minutes < (min_working // 2) and row.out_time is not None)
+        is_half_day = row.working_minutes < min_working
     else:
-        row.is_late = bool(getattr(row, "is_late", False))
+        is_half_day = row.status == "half_day"
 
     # Early-exit: out before early_exit_time
     if row.out_time:
@@ -133,15 +135,13 @@ def _recompute_out_fields(row, rules, now: datetime) -> None:
         # Still inside the school — keep IN-time derived status.
         if row.status in ("absent",):
             return
-    if row.is_early_exit:
+    if is_half_day:
+        row.status = "half_day"
+    elif row.is_early_exit:
         row.status = "early_exit"
     elif (row.overtime_minutes or 0) > 0:
         row.status = "overtime"
-    elif row.out_time and row.working_minutes and row.working_minutes < (int(getattr(rules, "min_working_minutes", 480)) // 2 or 240):
-        # Worked less than half the day -> half_day if not flagged already
-        if row.status != "half_day":
-            row.status = "half_day"
-    elif row.is_late and row.status not in ("present", "late"):
+    elif row.is_late:
         row.status = "late"
 
 

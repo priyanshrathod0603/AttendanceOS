@@ -1,9 +1,30 @@
-(() => { "use strict";
- const $=s=>document.querySelector(s), e=window.escapeHtml||String, mins=n=>`${Math.floor((n||0)/60)}h ${(n||0)%60}m`;
- let type='student';
- function header(){return type==='student'?['Roll','Student','Class','Section','IN','OUT','Working','Late','Early Exit','Break','Status','Camera','Confidence']:['Employee ID','Teacher','Department','Designation','IN','OUT','Working','Late','OT','Early Exit','Break','Status','Camera','Confidence'];}
- function cells(r){const main=type==='student'?`<td>${e(r.roll_no)}</td><td>${e(r.name)}</td><td>${e(r.class_name)}</td><td>${e(r.section)}</td>`:`<td>${e(r.employee_id)}</td><td>${e(r.name)}</td><td>${e(r.department||'')}</td><td>${e(r.designation||'')}</td>`;return `${main}<td>${r.in_time?new Date(r.in_time).toLocaleTimeString():'—'}</td><td>${r.out_time?new Date(r.out_time).toLocaleTimeString():'—'}</td><td>${mins(r.working_minutes)}</td><td>${r.late?'Yes':'No'}</td>${type==='teacher'?`<td>${mins(r.overtime_minutes)}</td>`:''}<td>${r.early_exit?'Yes':'No'}</td><td>${mins(r.break_minutes)}</td><td>${e(r.status)}</td><td>${e(r.camera||'—')}</td><td>${Number(r.confidence||0).toFixed(2)}</td>`}
- async function load(){const p=new URLSearchParams({type,date:$('#filter-date').value});if(type==='student'){p.set('class_name',$('#filter-class').value);p.set('section',$('#filter-section').value)}else{p.set('department',$('#filter-department').value);p.set('designation',$('#filter-designation').value)}const rows=await window.j(`/api/enterprise/attendance?${p}`);$('#ext-count').textContent=`${rows.length} ${type} daily records`;$('#ext-head').innerHTML=header().map(x=>`<th>${x}</th>`).join('');$('#ext-table tbody').innerHTML=rows.length?rows.map(r=>`<tr>${cells(r)}</tr>`).join(''):`<tr><td colspan="${header().length}" class="empty">No ${type} records found.</td></tr>`}
- function selectType(){type=$('#filter-type').value;document.querySelectorAll('.teacher-filter').forEach(x=>x.hidden=type!=='teacher');document.querySelectorAll('#filter-class,#filter-section').forEach(x=>x.closest('.filter-field').hidden=type!=='student');load()}
- $('#filter-date').value=new Date().toISOString().slice(0,10);['#filter-type','#filter-date','#filter-class','#filter-section','#filter-department','#filter-designation'].forEach(id=>$(id).addEventListener('change',id==='#filter-type'?selectType:load));load();setInterval(load,5000);
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s), e = window.escapeHtml || String;
+  const mins = (n) => `${Math.floor(Number(n || 0) / 60)}h ${Number(n || 0) % 60}m`;
+  const time = (v) => v ? new Date(v).toLocaleTimeString() : "—";
+  const yes = (v) => v ? '<span class="badge warn">Yes</span>' : "—";
+  const headers = ["Type", "Roll / ID", "Name", "Class / Department", "Section / Designation", "IN", "OUT", "Working Hours", "Late", "Half Day", "Early Exit", "Overtime", "Break Time", "Status", "Camera", "Confidence", "Recognition Type"];
+  function query() {
+    const p = new URLSearchParams({ type: $("#filter-type").value, date: $("#filter-date").value });
+    [["class_name", "#filter-class"], ["section", "#filter-section"], ["department", "#filter-department"], ["designation", "#filter-designation"], ["event_type", "#filter-event"], ["camera_id", "#filter-camera"], ["min_confidence", "#filter-min-confidence"], ["max_confidence", "#filter-max-confidence"], ["q", "#filter-search"]].forEach(([k, id]) => { if ($(id).value.trim()) p.set(k, $(id).value.trim()); });
+    return p;
+  }
+  function row(r) {
+    const ident = r.type === "student" ? r.roll_no : r.employee_id;
+    const group = r.type === "student" ? r.class_name : r.department;
+    const sub = r.type === "student" ? r.section : r.designation;
+    return `<tr><td>${e(r.type)}</td><td>${e(ident || "—")}</td><td>${e(r.name || "—")}</td><td>${e(group || "—")}</td><td>${e(sub || "—")}</td><td>${time(r.in_time)}</td><td>${time(r.out_time)}</td><td>${mins(r.working_minutes)}</td><td>${yes(r.is_late)}</td><td>${yes(r.is_half_day)}</td><td>${yes(r.is_early_exit)}</td><td>${mins(r.overtime_minutes)}</td><td>${mins(r.break_minutes)}</td><td>${e(r.status || "—")}</td><td>${e(r.camera || "—")}</td><td>${r.confidence == null ? "—" : Number(r.confidence).toFixed(2)}</td><td>${e(r.recognition_type || "face")}</td></tr>`;
+  }
+  async function load() {
+    const rows = await window.j(`/api/enterprise/sessions?${query()}`);
+    const min = Number($("#filter-min-working").value || 0), maxRaw = $("#filter-max-working").value, max = maxRaw ? Number(maxRaw) : Infinity;
+    const filtered = rows.filter((r) => Number(r.working_minutes || 0) >= min && Number(r.working_minutes || 0) <= max);
+    $("#ext-count").textContent = `${filtered.length} record${filtered.length === 1 ? "" : "s"}`;
+    $("#ext-head").innerHTML = headers.map((h) => `<th>${h}</th>`).join("");
+    $("#ext-table tbody").innerHTML = filtered.length ? filtered.map(row).join("") : `<tr><td colspan="${headers.length}" class="empty">No attendance records found.</td></tr>`;
+  }
+  $("#filter-date").value = new Date().toISOString().slice(0, 10);
+  document.querySelectorAll(".filters input, .filters select").forEach((el) => el.addEventListener(el.type === "search" ? "input" : "change", () => load().catch(console.error)));
+  load().catch(console.error); setInterval(() => load().catch(console.error), 15000);
 })();
