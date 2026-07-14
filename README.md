@@ -1,15 +1,19 @@
-# Face Attendance Management System
+# AttendanceOS
 
 <p align="center">
   <strong>Real-time, camera-based attendance for schools — with face recognition, time rules, enterprise reporting, and a modern Flask dashboard.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-Active%20Development-007AFF?style=for-the-badge" alt="Active development">
+  <img src="https://img.shields.io/badge/Status-Active%20Development-007AFF?style=for-the-badge" alt="Active Development">
   <img src="https://img.shields.io/badge/Python-3.14%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.14+">
-  <img src="https://img.shields.io/badge/Flask-3.x-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask">
+  <img src="https://img.shields.io/badge/Flask-3.x-000000?style=for-the-badge&logo=flask&logoColor=white" alt="Flask 3.x">
+  <img src="https://img.shields.io/badge/OpenCV-5.x-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white" alt="OpenCV">
   <img src="https://img.shields.io/badge/AI-InsightFace-6F42C1?style=for-the-badge" alt="InsightFace">
-  <img src="https://img.shields.io/badge/Database-SQLite%20%7C%20PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="Database support">
+  <img src="https://img.shields.io/badge/Database-SQLite%20%7C%20PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="SQLite / PostgreSQL">
+  <img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Linux-lightgrey?style=for-the-badge&logo=apple&logoColor=white" alt="Platform">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
+  <img src="https://img.shields.io/github/stars/priyanshrathod0603/AttendanceOS?style=for-the-badge&logo=github" alt="GitHub Stars">
 </p>
 
 <p align="center">
@@ -24,12 +28,14 @@
 
 ## ✨ Overview
 
-Face Attendance Management System is a Flask-based school attendance application that processes live camera frames with **InsightFace** and **OpenCV**, matches enrolled student and teacher embeddings, and records daily IN/OUT attendance. It includes a responsive Jinja2 dashboard, camera management, student and teacher enrolment, attendance time rules, audit trails, reports, exports, and a local attendance-query assistant.
+**AttendanceOS** is a Flask-based school attendance application that processes live camera frames with **InsightFace** and **OpenCV**, matches enrolled student and teacher embeddings, and records daily IN/OUT attendance. It includes a responsive Jinja2 dashboard, camera management, student and teacher enrolment, attendance time rules, audit trails, reports, exports, and a local attendance-query assistant.
 
-The application starts with SQLite by default (`krishna_erp.db`) and can use PostgreSQL when `DATABASE_URL` is configured. It is designed as a working school ERP attendance module; broader HR, payroll, mobile, cloud, and biometric capabilities are vision items, not implemented features.
+The application starts with SQLite by default (`krishna_erp.db`) and can use PostgreSQL when `DATABASE_URL` is configured. It is designed as a working school ERP attendance module; broader HR, payroll, mobile, cloud, and biometric capabilities are vision items, not yet implemented features.
 
 > [!IMPORTANT]
 > The project currently has no authentication, role-based login, liveness detection, QR/RFID capture, or outbound notification integration. Some of these names appear as persisted settings; they do not activate a corresponding implementation.
+
+---
 
 ## 📚 Table of Contents
 
@@ -41,7 +47,7 @@ The application starts with SQLite by default (`krishna_erp.db`) and can use Pos
 - [Configuration](#%EF%B8%8F-configuration)
 - [Database](#%EF%B8%8F-database)
 - [API Endpoints](#-api-endpoints)
-- [Screenshots & Visual Prompts](#%EF%B8%8F-screenshots--visual-prompts)
+- [Screenshots](#%EF%B8%8F-screenshots)
 - [Attendance Workflow](#-attendance-workflow)
 - [Recognition Pipeline](#-recognition-pipeline)
 - [Time Management Workflow](#%EF%B8%8F-time-management-workflow)
@@ -49,9 +55,9 @@ The application starts with SQLite by default (`krishna_erp.db`) and can use Pos
 - [Enterprise Features](#-enterprise-features)
 - [Security Notes](#-security-notes)
 - [Product Roadmap](#-product-roadmap)
-- [Why Choose This System?](#-why-choose-this-system)
+- [Why Choose AttendanceOS?](#-why-choose-attendanceos)
 - [Requirements](#-requirements)
-- [How to Run](#-how-to-run)
+- [How to Run](#%EF%B8%8F-how-to-run)
 - [Contributing](#-contributing)
 - [License](#-license)
 - [Author](#-author)
@@ -127,25 +133,25 @@ The application starts with SQLite by default (`krishna_erp.db`) and can use Pos
 - Enterprise report export to CSV, Excel (`openpyxl` required), PDF (`reportlab` required), printable HTML, or JSON.
 - Graceful CSV fallback when optional PDF/Excel dependencies are absent.
 
-### 📌 Not implemented yet
+### 📌 Not Yet Implemented
 
-QR attendance, RFID, WhatsApp/SMS/email delivery, anti-spoofing, liveness detection, actual alert delivery, login/authentication, and mobile applications are **not implemented**. The enterprise settings endpoint can store toggles for several of these concepts, but it does not provide their operational integration.
+QR attendance, RFID, WhatsApp/SMS/email delivery, anti-spoofing, liveness detection, actual alert delivery, login/authentication, and mobile applications are **not implemented**. The enterprise settings endpoint can store toggles for several of these concepts, but does not provide their operational integration.
 
 ---
 
 ## 🧰 Tech Stack
 
-| Layer | Technology in this repository |
+| Layer | Technology |
 |---|---|
 | **Backend** | Python, Flask, Flask-SQLAlchemy |
 | **Frontend** | Jinja2 templates, vanilla JavaScript, CSS, Lucide icons, Google Inter font |
-| **Database** | SQLite by default; PostgreSQL supported through SQLAlchemy + psycopg v3 |
-| **AI models** | InsightFace `buffalo_l` model pack via ONNX Runtime |
+| **Database** | SQLite by default; PostgreSQL supported via SQLAlchemy + psycopg v3 |
+| **AI Models** | InsightFace `buffalo_l` model pack via ONNX Runtime |
 | **Vision** | OpenCV, NumPy, Pillow |
 | **NLP** | Rule-based local intent parser; optional Ollama HTTP fallback |
 | **Reporting** | CSV built-ins; optional `openpyxl` and `reportlab` at runtime |
-| **Tools/scripts** | pgAdmin SQL initializer, schema migration, seed data, smoke test, pytest tests |
-| **Operating-system notes** | macOS/Apple Silicon is documented and explicitly handled for local webcam capture; OpenCV sources are also coded for non-macOS systems |
+| **Tools / Scripts** | pgAdmin SQL initializer, schema migration, seed data, smoke test, pytest tests |
+| **OS Notes** | macOS/Apple Silicon is documented and explicitly handled for local webcam capture; OpenCV sources are also coded for non-macOS systems |
 
 ---
 
@@ -175,7 +181,7 @@ sequenceDiagram
     API-->>Browser: JSON KPIs
 ```
 
-### Frontend → backend → recognition → database → dashboard
+### Request Flow: Frontend → Backend → Recognition → Database → Dashboard
 
 1. Jinja templates load `styles.css`, `common.js`, `app.js`, and page-specific JavaScript.
 2. Browser calls Flask JSON APIs for records, filters, dashboards, reports, and management actions.
@@ -191,30 +197,29 @@ sequenceDiagram
 The tree below reflects the tracked application structure. Runtime caches, the local SQLite database, and sample enrolled photos are omitted for clarity.
 
 ```text
-kes/
+AttendanceOS/
 ├── app.py                         # Flask factory, pages, APIs, exports, MJPEG stream
-├── attendance_service.py           # Enterprise IN/OUT write path and calculations
-├── config.py                       # Environment-driven Flask, DB, camera, AI settings
-├── enterprise_query.py              # Enterprise dashboard/report query builders
+├── attendance_service.py          # Enterprise IN/OUT write path and calculations
+├── config.py                      # Environment-driven Flask, DB, camera, AI settings
+├── enterprise_query.py            # Enterprise dashboard/report query builders
 ├── requirements.txt
 ├── MIGRATION.md
-├── walkthrough.md
 ├── assets/
-│   └── .gitkeep                    # Reserved for future README screenshots
+│   └── .gitkeep                   # Reserved for README screenshots
 ├── camera/
 │   ├── __init__.py
-│   └── stream.py                   # Multi-camera recognizer manager
+│   └── stream.py                  # Multi-camera recognizer manager
 ├── database/
 │   ├── __init__.py
-│   ├── db.py                       # SQLAlchemy instance
-│   ├── models.py                   # Core student, teacher, camera, attendance models
-│   └── enterprise_models.py         # Normalized enterprise attendance models
+│   ├── db.py                      # SQLAlchemy instance
+│   ├── models.py                  # Core student, teacher, camera, attendance models
+│   └── enterprise_models.py       # Normalized enterprise attendance models
 ├── migrations/
 │   └── README.md
 ├── recognition/
 │   ├── __init__.py
-│   ├── encoder.py                  # InsightFace image/frame encoding
-│   └── recognizer.py               # Background OpenCV recognition worker
+│   ├── encoder.py                 # InsightFace image/frame encoding
+│   └── recognizer.py             # Background OpenCV recognition worker
 ├── scripts/
 │   ├── init_db.py
 │   ├── init_pgadmin.sql
@@ -223,9 +228,9 @@ kes/
 │   └── smoke_test.py
 ├── slm/
 │   ├── __init__.py
-│   └── nlp_engine.py               # Offline intents + optional Ollama fallback
+│   └── nlp_engine.py             # Offline intents + optional Ollama fallback
 ├── static/
-│   ├── known_faces/                # Uploaded/enrolled face images
+│   ├── known_faces/              # Uploaded/enrolled face images
 │   ├── app.js
 │   ├── attendance_extended.js
 │   ├── attendance_v2.js
@@ -255,7 +260,7 @@ kes/
 │   └── test_camera_source.py
 └── time_management/
     ├── __init__.py
-    ├── api.py                      # Time rules, holidays, sessions, audit, reports
+    ├── api.py                     # Time rules, holidays, sessions, audit, reports
     ├── models.py
     └── service.py
 ```
@@ -264,33 +269,33 @@ kes/
 
 ## 📦 Installation
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
-git clone <your-repository-url>
-cd kes
+git clone https://github.com/priyanshrathod0603/AttendanceOS.git
+cd AttendanceOS
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create and Activate a Virtual Environment
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate              # macOS / Linux
-# .venv\Scripts\activate               # Windows PowerShell
+# .venv\Scripts\activate              # Windows PowerShell
 ```
 
-### 3. Install required packages
+### 3. Install Required Packages
 
 ```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 4. Choose a database
+### 4. Choose a Database
 
-**Fast local start:** no database configuration is required. The app defaults to SQLite at `krishna_erp.db`.
+**Fast local start:** No database configuration is required. The app defaults to SQLite at `krishna_erp.db`.
 
-**PostgreSQL:** create a database, then set `DATABASE_URL` before running the application.
+**PostgreSQL:** Create a database, then set `DATABASE_URL` before running the application.
 
 ```sql
 -- In pgAdmin Query Tool, or run scripts/init_pgadmin.sql
@@ -303,7 +308,7 @@ export DATABASE_URL='postgresql://USER:PASSWORD@localhost:5432/faceid_db'
 
 > `config.py` converts `postgresql://` and `postgres://` URLs to the SQLAlchemy psycopg v3 dialect automatically.
 
-### 5. Initialize / upgrade the schema
+### 5. Initialize / Upgrade the Schema
 
 `app.py` creates missing tables at startup and runs its additive compatibility checks. Run either helper when you want an explicit initialization step:
 
@@ -313,17 +318,17 @@ python scripts/init_db.py
 python scripts/migrate.py
 ```
 
-### 6. Start the application
+### 6. Start the Application
 
 ```bash
 python app.py
 ```
 
-### 7. Open the browser
+### 7. Open the Browser
 
 Open [http://localhost:5000](http://localhost:5000).
 
-### 8. Enrol people and start a camera
+### 8. Enrol People and Start a Camera
 
 1. Add a student or teacher from the dashboard.
 2. Upload a clear, front-facing image; a face embedding is created only when detection succeeds.
@@ -349,7 +354,7 @@ Configuration is centralized in [`config.py`](config.py). It loads a project-roo
 | Variable | Default | Purpose |
 |---|---|---|
 | `FLASK_SECRET` | `dev-secret-change-me` | Flask secret key; replace in every non-local deployment |
-| `DATABASE_URL` | local SQLite URI | SQLite by default; PostgreSQL URL when set |
+| `DATABASE_URL` | Local SQLite URI | SQLite by default; PostgreSQL URL when set |
 | `CAMERA_SOURCE` | `0` | Initial camera source: device index, RTSP/HTTP URL, or path |
 | `ATTENDANCE_COOLDOWN_SECONDS` | `300` | Per-person recognition cooldown in `FaceRecognizer` configuration |
 | `FACE_MATCH_THRESHOLD` | `0.35` | Cosine-similarity threshold for recognition |
@@ -358,7 +363,7 @@ Configuration is centralized in [`config.py`](config.py). It loads a project-roo
 | `OLLAMA_URL` | `http://localhost:11434` | Ollama service base URL |
 | `PORT` | `5000` | Development server port; app tries `5001` if 5000 is unavailable |
 
-### Camera source examples
+### Camera Source Examples
 
 ```dotenv
 CAMERA_SOURCE=0
@@ -368,11 +373,11 @@ CAMERA_SOURCE=0
 
 For HTTP sources, the recognizer appends `/video` when it is not already present. Blank or invalid text falls back to camera index `0`.
 
-### Known faces directory
+### Known Faces Directory
 
 Uploaded photos are saved under `static/known_faces/`; `Config.KNOWN_FACES_DIR` points there. Do not expose the application publicly without considering biometric-data retention, access controls, and consent requirements.
 
-### Optional report dependencies
+### Optional Report Dependencies
 
 `requirements.txt` does not include `openpyxl` or `reportlab`. Install them when you need native Excel/PDF output:
 
@@ -386,9 +391,9 @@ Without them, the relevant export handler falls back to CSV.
 
 ## 🗃️ Database
 
-### Core entities
+### Core Entities
 
-| Table | Purpose | Key relationships |
+| Table | Purpose | Key Relationships |
 |---|---|---|
 | `students` | Enrolled students and InsightFace embeddings | One student has legacy `attendance` rows; one daily `student_attendance` row per date |
 | `teachers` | Enrolled teachers and embeddings | One teacher has one `teacher_attendance` row per date |
@@ -396,7 +401,7 @@ Without them, the relevant export handler falls back to CSV.
 | `attendance` | Legacy detection-oriented student attendance records | References `students` and optionally `cameras`; can link to `attendance_session` |
 | `unknown_faces` | Unrecognized-face review records | Optionally references a camera |
 
-### Enterprise and time-management entities
+### Enterprise and Time-Management Entities
 
 | Table | Purpose |
 |---|---|
@@ -415,7 +420,7 @@ Without them, the relevant export handler falls back to CSV.
 | `notifications` | Notification queue schema; no sender/worker implementation exists |
 | `attendance_settings` | Boolean feature-toggle persistence for enterprise settings |
 
-### ER diagram
+### ER Diagram
 
 ```mermaid
 erDiagram
@@ -437,7 +442,7 @@ erDiagram
 
 All JSON APIs are served by Flask. Mutating endpoints under the time-management blueprint check `X-User-Role`; when that header is absent, the code treats the caller as `admin`. This is a compatibility stub, **not a full authentication system**.
 
-### Pages and stream
+### Pages and Stream
 
 | Method | Endpoint | Description | Example |
 |---|---|---|---|
@@ -456,7 +461,7 @@ All JSON APIs are served by Flask. Mutating endpoints under the time-management 
 | GET | `/attendance-extended` | Extended attendance page | `/attendance-extended` |
 | GET | `/stream/<cid>` | Annotated MJPEG stream | `/stream/1` |
 
-### Core management and attendance
+### Core Management and Attendance
 
 | Method | Endpoint | Description | Example |
 |---|---|---|---|
@@ -473,7 +478,7 @@ All JSON APIs are served by Flask. Mutating endpoints under the time-management 
 | POST | `/api/students/<sid>/photo` | Upload and encode student photo | `POST /api/students/1/photo` |
 | GET | `/api/attendance` | Query legacy attendance rows | `/api/attendance?date=2026-07-14` |
 | PUT, DELETE | `/api/attendance/<aid>` | Update/delete legacy attendance | `PUT /api/attendance/42` |
-| GET | `/api/attendance/today` | Today’s legacy attendance rows | `/api/attendance/today` |
+| GET | `/api/attendance/today` | Today's legacy attendance rows | `/api/attendance/today` |
 | GET | `/api/attendance/export` | Download legacy CSV/PDF attendance | `/api/attendance/export?format=csv` |
 | GET | `/api/unknown-faces` | List latest unknown-face records | `/api/unknown-faces` |
 | POST, DELETE | `/api/unknown-faces/<uid>/action` | Review action or delete unknown face | `POST /api/unknown-faces/1/action` |
@@ -482,7 +487,7 @@ All JSON APIs are served by Flask. Mutating endpoints under the time-management 
 | POST | `/api/teachers/<tid>/photo` | Upload and encode teacher photo | `POST /api/teachers/1/photo` |
 | POST | `/api/ask` | Ask the attendance assistant | `POST /api/ask` |
 
-### Enterprise dashboard, reports, and settings
+### Enterprise Dashboard, Reports, and Settings
 
 | Method | Endpoint | Description | Example |
 |---|---|---|---|
@@ -497,12 +502,12 @@ All JSON APIs are served by Flask. Mutating endpoints under the time-management 
 | GET | `/api/reports/preview` | JSON preview for enterprise report | `/api/reports/preview?type=daily` |
 | GET | `/api/reports/export` | CSV/XLSX/PDF/print/JSON enterprise exports | `/api/reports/export?type=daily&format=csv` |
 
-### Time-management blueprint (`/api`)
+### Time-Management Blueprint (`/api`)
 
 | Method | Endpoint | Description | Example |
 |---|---|---|---|
 | GET, PUT | `/api/time-rules/<scope>` | Read/update time-management rule | `/api/time-rules/student` |
-| POST | `/api/time-rules/<scope>/reset` | Reset a scope’s rules | `POST /api/time-rules/student/reset` |
+| POST | `/api/time-rules/<scope>/reset` | Reset a scope's rules | `POST /api/time-rules/student/reset` |
 | GET, POST | `/api/holidays` | List/create scoped holidays | `/api/holidays?scope=student` |
 | PUT, DELETE | `/api/holidays/<hid>` | Update/delete a holiday | `DELETE /api/holidays/1` |
 | GET | `/api/sessions` | Filter legacy-compatible attendance sessions | `/api/sessions?date=2026-07-14` |
@@ -513,9 +518,9 @@ All JSON APIs are served by Flask. Mutating endpoints under the time-management 
 | GET | `/api/dashboard/summary` | Time-management dashboard summary | `/api/dashboard/summary?date=2026-07-14` |
 | GET | `/api/reports/<rptype>` | CSV/JSON/PDF-style time reports | `/api/reports/daily?format=csv` |
 
-> Valid `rptype` values are `daily`, `weekly`, `monthly`, `teacher`, `student`, `late`, `half_day`, `working_hours`, `early_exit`, `overtime`, `holiday`, and `summary`.
+> Valid `rptype` values: `daily`, `weekly`, `monthly`, `teacher`, `student`, `late`, `half_day`, `working_hours`, `early_exit`, `overtime`, `holiday`, and `summary`.
 
-### API flow
+### API Flow
 
 ```mermaid
 flowchart LR
@@ -529,27 +534,53 @@ flowchart LR
 
 ---
 
-## 🖼️ Screenshots & Visual Prompts
+## 🖼️ Screenshots
 
-No committed product screenshots were found in this repository. The `assets/` directory is intentionally included as a placeholder for future, truthful screenshots. The image references below are **not shipped image files yet**; generate or capture them before publishing a public README.
+> Screenshots will be added once the `assets/` directory is populated with real application captures. Drop your images into the paths below and they will display automatically.
 
-| Screen | Placeholder | Production-ready visual prompt |
-|---|---|---|
-| Dashboard | ![Dashboard placeholder](assets/dashboard-preview.png) | `Ultra-modern school attendance dashboard, Apple-inspired glass UI, blue gradient, attendance KPI cards, live camera tiles, charts, premium SaaS interface, 4K realistic product mockup` |
-| Attendance | ![Attendance placeholder](assets/attendance-preview.png) | `Enterprise face attendance management table, IN OUT times, search filters, confidence badges, clean blue and white SaaS UI, realistic web application mockup` |
-| Students | ![Students placeholder](assets/students-preview.png) | `Student management SaaS screen, class and section filters, profile table, face enrolment actions, elegant glassmorphism, premium education ERP UI` |
-| Teachers | ![Teachers placeholder](assets/teachers-preview.png) | `Teacher management dashboard, department and designation records, face enrolment, premium school ERP web UI, modern blue accents` |
-| Cameras | ![Cameras placeholder](assets/cameras-preview.png) | `Multi-camera monitoring console for school entrances, live video tiles, camera health badges, face boxes, premium enterprise SaaS UI` |
-| Unknown faces | ![Unknown faces placeholder](assets/unknown-faces.png) | `Unknown face detection review queue, blurred face thumbnails, approve and assign actions, secure enterprise attendance dashboard UI` |
-| Reports | ![Reports placeholder](assets/reports-preview.png) | `Attendance reporting workspace, date filters, export controls, bar charts and data table, polished enterprise SaaS design` |
-| Analytics | ![Analytics placeholder](assets/analytics.png) | `Executive attendance analytics dashboard, seven-day trend, hourly entries, class heatmap, premium data visualization UI` |
-| Time rules | ![Time management placeholder](assets/time-management.png) | `Attendance time rules settings screen, office hours, late threshold, overtime configuration, holiday calendar, modern admin SaaS UI` |
-| Mobile vision | ![Mobile placeholder](assets/mobile-app.png) | `Future mobile attendance companion app, student check-in overview, face attendance status, iOS and Android premium product mockup` |
-| Login (future) | `assets/login-screen.png` | `Secure enterprise SaaS login page for attendance system, elegant blue gradient, biometric-inspired illustration, minimal premium UI` |
-| Settings | `assets/settings-preview.png` | `School ERP settings screen, organization profile, database and camera configuration, refined enterprise admin interface` |
-| AI assistant | `assets/chat-assistant.png` | `AI attendance assistant chat panel in enterprise dashboard, concise attendance insights, premium glassmorphism web UI` |
-| Payroll (future) | `assets/payroll-dashboard.png` | `Future payroll management dashboard, salary cards, payslip status, tax overview, enterprise HR SaaS, premium UI` |
-| HR (future) | `assets/hr-dashboard.png` | `Future human resources dashboard, employee lifecycle metrics, recruitment pipeline, onboarding cards, premium enterprise SaaS` |
+### Dashboard
+
+![Dashboard](assets/dashboard.png)
+
+### Attendance
+
+![Attendance](assets/attendance.png)
+
+### Student Management
+
+![Students](assets/students.png)
+
+### Teacher Management
+
+![Teachers](assets/teachers.png)
+
+### Camera Monitoring
+
+![Cameras](assets/cameras.png)
+
+### Reports & Analytics
+
+![Reports](assets/reports.png)
+
+### Enterprise Dashboard
+
+![Enterprise Dashboard](assets/analytics.png)
+
+### Time Rules
+
+![Time Rules](assets/time-management.png)
+
+### Unknown Faces Review
+
+![Unknown Faces](assets/unknown-faces.png)
+
+### AI Attendance Assistant
+
+![AI Assistant](assets/chat-assistant.png)
+
+### Settings
+
+![Settings](assets/settings-preview.png)
 
 ---
 
@@ -559,7 +590,7 @@ No committed product screenshots were found in this repository. The `assets/` di
 flowchart TD
     A[Camera frame] --> B[Face detected]
     B --> C[InsightFace embedding]
-    C --> D{Cosine similarity ≥ threshold?}
+    C --> D{Cosine similarity >= threshold?}
     D -- No --> U[Keep UI detection as Unknown]
     D -- Yes --> E[Identify active student or teacher]
     E --> F{Cooldown elapsed?}
@@ -577,7 +608,7 @@ flowchart TD
 1. A `FaceRecognizer` receives an OpenCV frame from a configured camera.
 2. InsightFace returns all detected faces and their normalized embeddings.
 3. The recognizer compares each embedding with enrolled active student and teacher vectors.
-4. A match must meet the configured similarity threshold; unmatched faces remain “Unknown” in the live detection overlay.
+4. A match must meet the configured similarity threshold; unmatched faces remain "Unknown" in the live detection overlay.
 5. A 300-second default per-person cooldown prevents repeated writes from the same running recognizer.
 6. `record_recognition()` creates an IN record, ignores a pre-OUT-window repeat, updates the OUT record, or rejects a completed daily record according to the time rule.
 7. The service persists a normalized daily record and, for valid IN/OUT, an `attendance_events` record.
@@ -599,15 +630,15 @@ flowchart LR
     Service --> Database[(Database)]
 ```
 
-### Pipeline details
+### Pipeline Details
 
 - **Camera:** `FaceRecognizer` normalizes source values, opens a capture, warms it up, and retries after repeated failures.
-- **OpenCV:** reads BGR frames; encoder converts to RGB for InsightFace.
+- **OpenCV:** Reads BGR frames; encoder converts to RGB for InsightFace.
 - **InsightFace:** `FaceAnalysis` is lazily constructed once per process with `buffalo_l`, CPU execution provider, `detection` and `recognition` modules, and 640×640 detection size.
-- **Encoding:** largest-face encoding is used during enrolment; all faces are processed in live frames.
+- **Encoding:** Largest-face encoding is used during enrolment; all faces are processed in live frames.
 - **Matching:** L2-normalized vectors are compared by dot product (cosine similarity).
-- **Attendance service:** applies daily IN/OUT and time rule logic to the matched student or teacher.
-- **Database:** stores attendance, event, and reporting state through SQLAlchemy.
+- **Attendance service:** Applies daily IN/OUT and time rule logic to the matched student or teacher.
+- **Database:** Stores attendance, event, and reporting state through SQLAlchemy.
 
 ---
 
@@ -629,17 +660,17 @@ flowchart TD
     Flags --> Event[Write attendance event]
 ```
 
-| Outcome | Current implementation |
+| Outcome | Current Implementation |
 |---|---|
 | **IN** | First valid recognition at/after `office_start` creates daily attendance and an IN event. |
 | **OUT** | A later recognition only becomes OUT at/after `out_detection_start`. |
 | **Late** | First IN at/after `late_time` is marked late. |
-| **Half day** | First IN at/after `half_day_time` is marked half day; completed records can also become half day when below minimum working minutes. |
-| **Early exit** | OUT before `early_exit_time` is flagged. |
+| **Half Day** | First IN at/after `half_day_time` is marked half day; completed records can also become half day when below minimum working minutes. |
+| **Early Exit** | OUT before `early_exit_time` is flagged. |
 | **Overtime** | OUT after `overtime_start`, when enabled, yields overtime minutes. |
-| **Working hours** | Difference between UTC-aware IN and OUT timestamps, stored in minutes and seconds. |
+| **Working Hours** | Difference between UTC-aware IN and OUT timestamps, stored in minutes and seconds. |
 | **Breaks** | `break_minutes` exists but remains zero; break event capture is not implemented. |
-| **Holidays / weekly off** | The separate `time_management` service checks `attendance_holiday` and its rule’s weekly-off values. The active live enterprise writer uses `student_time_rules`/`teacher_time_rules` and does not call that holiday checker. |
+| **Holidays / Weekly Off** | The separate `time_management` service checks `attendance_holiday` and its rule's weekly-off values. The active live enterprise writer uses `student_time_rules`/`teacher_time_rules` and does not call that holiday checker. |
 
 ---
 
@@ -657,7 +688,7 @@ flowchart TD
 
 ## 🏢 Enterprise Features
 
-| Module | What is implemented |
+| Module | What Is Implemented |
 |---|---|
 | Normalized attendance | Separate daily student/teacher tables, one record per person/date, with IN/OUT, working time, late, early-exit, and overtime fields. |
 | Attendance event ledger | IN/OUT event rows with type, time, source camera, and confidence. |
@@ -665,14 +696,14 @@ flowchart TD
 | Time rules | Two model families exist: rules used by the live writer and rules used by the additive time-management API. Both expose student/teacher timing concepts. |
 | Auditability | Audit tables and audited endpoints for rule, holiday, session, and legacy attendance edits. |
 | Unknown-face review | Read/action/delete endpoints and logging; live unmatched detections are not automatically stored. |
-| Feature settings | Persisted booleans for face recognition, QR, RFID, manual attendance, WhatsApp, SMS, email, anti-spoofing, liveness, and unknown-face alerts. Only face recognition is operational in the provided code. |
+| Feature settings | Persisted booleans for face recognition, QR, RFID, manual attendance, WhatsApp, SMS, email, anti-spoofing, liveness, and unknown-face alerts. Only face recognition is operational in the current codebase. |
 | Notifications / corrections / camera sessions | Database models exist, but application workflows and API operations are not implemented. |
 
 ---
 
 ## 🔐 Security Notes
 
-### Present in code
+### Present in Code
 
 - Required-field validation for camera and student creation.
 - Unique constraints/checks for student roll numbers, teacher IDs, daily attendance records, rule scopes, holiday scope/date, and camera source conflict handling.
@@ -683,7 +714,7 @@ flowchart TD
 - Audit logging for several time-management, attendance, and unknown-face actions.
 - Configurable face-match threshold.
 
-### Not implemented yet — deployment caution
+### Not Yet Implemented — Deployment Caution
 
 - Authentication and robust authorization (the `X-User-Role` behavior defaults missing callers to admin).
 - Role-based access control, multi-factor authentication, CSRF protection, rate limiting, encrypted biometric storage, liveness detection, anti-spoofing, and retention/consent workflows.
@@ -693,7 +724,7 @@ flowchart TD
 
 # 🚀 Product Roadmap
 
-> Product direction, not a statement of current capability. The roadmap intentionally separates **available now**, **in development/not wired**, and **planned** work.
+> Product direction, not a statement of current capability. The roadmap intentionally separates **available now**, **in development / not yet wired**, and **planned** work.
 
 ## ✅ Current Features
 
@@ -709,7 +740,7 @@ flowchart TD
 - [x] CSV, optional Excel/PDF, printable HTML, and JSON report outputs
 - [x] Offline attendance-query assistant with optional local Ollama fallback
 
-## 🚧 In Development / Not Yet Wired
+## 🚧 In Progress / Not Yet Wired
 
 `████████░░░░░░░░░░░░░░░░` **Models/settings exist; end-to-end delivery does not**
 
@@ -720,9 +751,9 @@ flowchart TD
 - [ ] Required dependency packaging for native PDF and Excel exports
 - [ ] Consolidation of the two overlapping time-rule / attendance-session implementations
 
-## 🔮 Planned Features
+## 🔮 Future Plans
 
-`██░░░░░░░░░░░░░░░░░░░░░░` **Future enterprise product vision — not implemented**
+`██░░░░░░░░░░░░░░░░░░░░░░` **Future enterprise product vision — not yet implemented**
 
 <details>
 <summary><strong>HR & Payroll</strong></summary>
@@ -733,7 +764,7 @@ flowchart TD
 </details>
 
 <details>
-<summary><strong>Human Resource</strong></summary>
+<summary><strong>Human Resources</strong></summary>
 
 - [ ] Employee management · recruitment module · job portal
 - [ ] Interview tracking · offer-letter generator · employee onboarding
@@ -741,7 +772,7 @@ flowchart TD
 </details>
 
 <details>
-<summary><strong>Attendance</strong></summary>
+<summary><strong>Attendance Expansion</strong></summary>
 
 - [ ] GPS attendance · QR attendance · RFID attendance
 - [ ] Fingerprint integration · iris scanner support · multi-device attendance
@@ -791,14 +822,14 @@ flowchart TD
 </details>
 
 <details>
-<summary><strong>Multi-organization</strong></summary>
+<summary><strong>Multi-Organization</strong></summary>
 
 - [ ] Multi-school support · multi-company support · branch management
 - [ ] Franchise management · cloud sync
 </details>
 
 <details>
-<summary><strong>Mobile apps</strong></summary>
+<summary><strong>Mobile Apps</strong></summary>
 
 - [ ] Android app · iOS app · parent app · teacher app
 - [ ] Employee self-service app · admin app
@@ -813,7 +844,7 @@ flowchart TD
 </details>
 
 <details>
-<summary><strong>Enterprise operations</strong></summary>
+<summary><strong>Enterprise Operations</strong></summary>
 
 - [ ] Visitor management · gate pass · asset and inventory management
 - [ ] Meeting-room booking · transport · hostel · library · canteen management
@@ -829,20 +860,20 @@ flowchart TD
 
 ---
 
-# 🌟 Why Choose This System?
+# 🌟 Why Choose AttendanceOS?
 
 This project delivers a solid, inspectable foundation for organizations that need real-time face-attendance workflows without hiding the product state behind marketing language.
 
-| Value | What exists today | Product direction |
+| Value | What Exists Today | Product Direction |
 |---|---|---|
-| **AI powered** | InsightFace embeddings and cosine matching process live camera frames. | Add face quality, anomaly, and fraud intelligence. |
-| **Real-time** | Background recognizers, camera status, MJPEG streams, and live dashboard queries. | Expand to multi-device and mobile synchronization. |
+| **AI Powered** | InsightFace embeddings and cosine matching process live camera frames. | Add face quality, anomaly, and fraud intelligence. |
+| **Real-Time** | Background recognizers, camera status, MJPEG streams, and live dashboard queries. | Expand to multi-device and mobile synchronization. |
 | **Modular** | Recognition, camera, time-management, enterprise query, NLP, and Flask layers are separated. | Evolve modules into broader school/company ERP services. |
-| **Performance-minded** | Cached known embeddings, lazy model initialization, worker threads, cooldowns, and reconnect logic. | Add deployment observability and horizontal scaling. |
-| **Business-ready foundation** | Student/teacher operations, attendance rules, exports, audit records, and dashboards are present. | Add authentication, notifications, payroll, and multi-organization control. |
-| **Cloud-ready direction** | PostgreSQL is supported via environment configuration. | Docker, managed cloud, backups, CI/CD, and multi-tenant hosting are planned. |
+| **Performance-Minded** | Cached known embeddings, lazy model initialization, worker threads, cooldowns, and reconnect logic. | Add deployment observability and horizontal scaling. |
+| **Business-Ready Foundation** | Student/teacher operations, attendance rules, exports, audit records, and dashboards are present. | Add authentication, notifications, payroll, and multi-organization control. |
+| **Cloud-Ready Direction** | PostgreSQL is supported via environment configuration. | Docker, managed cloud, backups, CI/CD, and multi-tenant hosting are planned. |
 
-The system is best suited today for teams that want a transparent, locally runnable face-attendance base and are prepared to complete production security, compliance, and deployment work for their environment.
+AttendanceOS is best suited for teams that want a transparent, locally runnable face-attendance base and are prepared to complete production security, compliance, and deployment work for their environment.
 
 ---
 
@@ -850,14 +881,14 @@ The system is best suited today for teams that want a transparent, locally runna
 
 ### Software
 
-- Python **3.14+** is the documented target in this repository.
+- Python **3.14+** is the documented target for this repository.
 - pip and a virtual environment tool.
 - A local camera, USB camera, IP/RTSP stream, or supported video source for live recognition.
 - SQLite (included with Python) or PostgreSQL for the database.
 - Optional: pgAdmin for PostgreSQL administration.
 - Optional: Ollama and a local model for non-rule-based assistant fallback.
 
-### Python packages
+### Python Packages
 
 The application requirements are maintained in [`requirements.txt`](requirements.txt):
 
@@ -881,11 +912,11 @@ Optional, not listed in the project requirements: `openpyxl` for `.xlsx` exports
 
 ## ▶️ How to Run
 
-### Local SQLite quick start
+### Local SQLite Setup
 
 ```bash
-git clone <your-repository-url>
-cd kes
+git clone https://github.com/priyanshrathod0603/AttendanceOS.git
+cd AttendanceOS
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -893,31 +924,33 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Visit `http://localhost:5000`.
+Open [http://localhost:5000](http://localhost:5000) in your browser.
 
-### PostgreSQL quick start
+### PostgreSQL Setup
 
 ```bash
-git clone <your-repository-url>
-cd kes
+git clone https://github.com/priyanshrathod0603/AttendanceOS.git
+cd AttendanceOS
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Create the database in pgAdmin or with psql first.
+# Create the database in pgAdmin or with psql first, then export the connection string:
 export DATABASE_URL='postgresql://USER:PASSWORD@localhost:5432/faceid_db'
 export FLASK_SECRET='replace-with-a-long-random-value'
 python scripts/init_db.py
 python app.py
 ```
 
-### Useful verification commands
+Open [http://localhost:5000](http://localhost:5000) in your browser.
+
+### Verify Installation
 
 ```bash
 # Import-level dependency smoke test
 python scripts/smoke_test.py
 
-# Camera source normalization tests
+# Camera source normalization unit tests
 pytest -q
 ```
 
@@ -925,7 +958,7 @@ pytest -q
 
 ## 🤝 Contributing
 
-Contributions are welcome. Please keep changes scoped, testable, and truthful to the system’s current behavior.
+Contributions are welcome. Please keep changes scoped, testable, and truthful to the system's current behavior.
 
 1. Fork the repository and create a feature branch.
 2. Create and activate a virtual environment; install dependencies.
@@ -936,25 +969,30 @@ Contributions are welcome. Please keep changes scoped, testable, and truthful to
 7. Open a pull request with a concise description, verification steps, and screenshots only when they reflect the actual UI.
 
 ```bash
+git clone https://github.com/priyanshrathod0603/AttendanceOS.git
+cd AttendanceOS
 git checkout -b feature/short-description
+# make your changes
 pytest -q
 python scripts/smoke_test.py
 git commit -m "feat: describe the change"
 ```
 
+For bugs or feature requests, open an issue at [github.com/priyanshrathod0603/AttendanceOS/issues](https://github.com/priyanshrathod0603/AttendanceOS/issues).
+
 ---
 
 ## 📄 License
 
-**MIT License — intended.** A standalone `LICENSE` file is not currently present in the repository, so the legal license grant is **not implemented yet**. Add the approved MIT license text in a `LICENSE` file before distributing the project as MIT-licensed software.
+**MIT License — intended.** A standalone `LICENSE` file is not currently present in the repository, so the legal license grant is **not yet in effect**. Add the approved MIT license text in a `LICENSE` file before distributing the project as MIT-licensed software.
 
 ---
 
 ## 👤 Author
 
-**Krishna English School ERP / Face Attendance Management System**
+**AttendanceOS** — Face Attendance Management System
 
-Maintained as a school attendance and ERP foundation. For product ownership, commercial licensing, security disclosures, or deployment support, add the organization’s official contact channel and repository URL here before publication.
+Maintained as a school attendance and ERP foundation. For product ownership, commercial licensing, security disclosures, or deployment support, please open an issue at [github.com/priyanshrathod0603/AttendanceOS](https://github.com/priyanshrathod0603/AttendanceOS).
 
 ---
 
